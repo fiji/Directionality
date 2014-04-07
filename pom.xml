@@ -35,6 +35,13 @@
 		</dependency>
 	</dependencies>
 
+	<scm>
+		<connection>scm:git:git://github.com/fiji/Directionality</connection>
+		<developerConnection>scm:git:git@github.com:fiji/Directionality</developerConnection>
+		<tag>HEAD</tag>
+		<url>https://github.com/fiji/Directionality</url>
+	</scm>
+
 	<repositories>
 		<!-- NB: for project parent, in case of partial checkout -->
 		<repository>
