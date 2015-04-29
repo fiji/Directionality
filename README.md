@@ -1,3 +1,5 @@
+![](http://jenkins.imagej.net/job/Directionality/lastBuild/badge/icon)
+
 Directionality
 ==============
 
