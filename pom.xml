@@ -51,5 +51,4 @@
 			<artifactId>jfreechart</artifactId>
 		</dependency>
 	</dependencies>
-
 </project>
