@@ -1,4 +1,4 @@
-[![](http://jenkins.imagej.net/job/Directionality/lastBuild/badge/icon)](http://jenkins.imagej.net/job/Directionality/)
+[![](https://travis-ci.org/fiji/Directionality.svg?branch=master)](https://travis-ci.org/fiji/Directionality)
 
 Directionality
 ==============
