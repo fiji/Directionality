@@ -506,8 +506,8 @@ public class Directionality_ implements PlugIn
 
 	/**
 	 * This method runs the analysis on all slices, and store resulting
-	 * histograms in the {@link #histograms} fields. Calling this method resets
-	 * the aforementioned field.
+	 * histograms in the histogram fields. Calling this method resets the
+	 * aforementioned field.
 	 */
 	public void computeHistograms()
 	{
@@ -651,7 +651,7 @@ public class Directionality_ implements PlugIn
 	 * <li>gaussian peak center
 	 * <li>gaussian standard deviation
 	 * <li>amount, that is: the sum of the histogram data from the gaussian
-	 * center until {@value #SIGMA_NUMBER} times its standard deviation away
+	 * center until SIGMA_NUMBER times its standard deviation away
 	 * <li>the goodness of fit
 	 * </ol>
 	 * The periodic nature of the data is taken into account. For the amount
@@ -715,8 +715,8 @@ public class Directionality_ implements PlugIn
 
 	/**
 	 * This method is called to draw the histograms resulting from image
-	 * analysis. It reads the result in the {@link #histograms} list field, and
-	 * use the JFreeChart library to draw a nice plot window. If the
+	 * analysis. It reads the result in the histogram list field, and use the
+	 * JFreeChart library to draw a nice plot window. If the
 	 * {@code fitResults()} method was called before, the fits are also drawn.
 	 * 
 	 * @return a {@link JFrame} containing the histogram plots, which
@@ -858,8 +858,8 @@ public class Directionality_ implements PlugIn
 	/**
 	 * This method tries to fit a gaussian to the highest peak of each
 	 * directionality histogram, and store fit results in the
-	 * {@link #params_from_fit} field. The goodness of fit will be stored in
-	 * {@link #goodness_of_fit}.
+	 * <code>params_from_fit</code> field. The goodness of fit will be stored in
+	 * <code>goodness_of_fit</code>.
 	 */
 	public void fitHistograms()
 	{
@@ -1006,7 +1006,7 @@ public class Directionality_ implements PlugIn
 
 	/**
 	 * Set the image for analysis. Calling this method resets the field
-	 * {@link #histograms} to null.
+	 * <code>histograms</code> to null.
 	 */
 	public void setImagePlus( final ImagePlus imp )
 	{
@@ -1112,8 +1112,8 @@ public class Directionality_ implements PlugIn
 	}
 
 	/**
-	 * Set the desired number of bins. This resets the {@link #histograms} field
-	 * to null.
+	 * Set the desired number of bins. This resets the <code>histograms</code>
+	 * field to null.
 	 */
 	public void setBinNumber( final int nbins )
 	{
@@ -1124,8 +1124,6 @@ public class Directionality_ implements PlugIn
 
 	/**
 	 * Return the current number of bins for this instance.
-	 * 
-	 * @return
 	 */
 	public int getBinNumber()
 	{
@@ -1134,7 +1132,7 @@ public class Directionality_ implements PlugIn
 
 	/**
 	 * Set the desired start for the angle bins, in degrees. This resets the
-	 * {@link #histograms} field to null.
+	 * <code>histograms</code> field to null.
 	 */
 	public void setBinStart( final double bin_start )
 	{
@@ -1151,8 +1149,8 @@ public class Directionality_ implements PlugIn
 	}
 
 	/**
-	 * Set the desired method for analysis. This resets the {@link #histograms}
-	 * field to null.
+	 * Set the desired method for analysis. This resets the
+	 * <code>histograms</code> field to null.
 	 * <p>
 	 * See {@link AnalysisMethod}
 	 * </p>
@@ -1165,8 +1163,6 @@ public class Directionality_ implements PlugIn
 
 	/**
 	 * Return the analysis method used by this instance.
-	 * 
-	 * @return
 	 */
 	public AnalysisMethod getMethod()
 	{
