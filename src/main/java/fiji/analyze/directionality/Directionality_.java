@@ -1105,9 +1105,8 @@ public class Directionality_ implements PlugIn
 	{
 		final double[] degree_bins = new double[ nbins ];
 		for ( int i = 0; i < degree_bins.length; i++ )
-		{
-			degree_bins[ i ] = bin_start + 180 * i * ( bins[ i ] + Math.PI / 2 ) / Math.PI;
-		}
+			degree_bins[ i ] = bin_start + 180 * ( bins[ i ] + Math.PI / 2 ) / Math.PI;
+
 		return degree_bins;
 	}
 
