@@ -1,26 +1,5 @@
 package fiji.analyze.directionality;
 
-import ij.IJ;
-import ij.ImagePlus;
-import ij.ImageStack;
-import ij.WindowManager;
-import ij.gui.GenericDialog;
-import ij.gui.ImageCanvas;
-import ij.gui.Line;
-import ij.gui.NewImage;
-import ij.gui.Roi;
-import ij.measure.CurveFitter;
-import ij.measure.ResultsTable;
-import ij.plugin.Duplicator;
-import ij.plugin.PlugIn;
-import ij.plugin.filter.Convolver;
-import ij.plugin.filter.GaussianBlur;
-import ij.process.ByteProcessor;
-import ij.process.ColorProcessor;
-import ij.process.FHT;
-import ij.process.FloatProcessor;
-import ij.process.ImageProcessor;
-
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.GridLayout;
@@ -45,6 +24,26 @@ import org.jfree.chart.renderer.xy.XYLineAndShapeRenderer;
 import org.jfree.data.xy.XYSeries;
 import org.jfree.data.xy.XYSeriesCollection;
 
+import ij.IJ;
+import ij.ImagePlus;
+import ij.ImageStack;
+import ij.WindowManager;
+import ij.gui.GenericDialog;
+import ij.gui.ImageCanvas;
+import ij.gui.Line;
+import ij.gui.NewImage;
+import ij.gui.Roi;
+import ij.measure.CurveFitter;
+import ij.measure.ResultsTable;
+import ij.plugin.Duplicator;
+import ij.plugin.PlugIn;
+import ij.plugin.filter.Convolver;
+import ij.plugin.filter.GaussianBlur;
+import ij.process.ByteProcessor;
+import ij.process.ColorProcessor;
+import ij.process.FHT;
+import ij.process.FloatProcessor;
+import ij.process.ImageProcessor;
 
 /**
  * <h2>Usage</h2> This plugin is used to infer the preferred orientation of
@@ -66,10 +65,10 @@ import org.jfree.data.xy.XYSeriesCollection;
  * periodic nature of the histogram. The 'Direction (º)' column reports the
  * center of the gaussian. The 'Dispersion (º)' column reports the standard
  * deviation of the gaussian. The 'Amount' column is the sum of the histogram
- * from the center of the peak to <b>two</b> standard deviation away, divided by 
- * the total sum of the histogram. The
- * real histogram values are used for the summation, not the gaussian fit. The
- * 'Goodness' column reports the goodness of the fit; 1 is good, 0 is bad.
+ * from the center of the peak to <b>two</b> standard deviation away, divided by
+ * the total sum of the histogram. The real histogram values are used for the
+ * summation, not the gaussian fit. The 'Goodness' column reports the goodness
+ * of the fit; 1 is good, 0 is bad.
  * <p>
  * A study made on artificial images reveal that the 'Amount' value as
  * calculated here underestimates the real proportion of structures with the
@@ -81,67 +80,70 @@ import org.jfree.data.xy.XYSeriesCollection;
  * 
  * <h3>Fourier components analysis</h3>
  * 
- * This method is based on Fourier spectrum analysis. For a square
- * image, structures with a preferred orientation generate a periodic pattern at
- * +90º orientation in the Fourier transform of the image, compared to the
- * direction of the objects in the input image. 
+ * This method is based on Fourier spectrum analysis. For a square image,
+ * structures with a preferred orientation generate a periodic pattern at +90º
+ * orientation in the Fourier transform of the image, compared to the direction
+ * of the objects in the input image.
  * <p>
- * This plugin chops the image into
- * square pieces, and computes their Fourier power spectra. The later are
- * analyzed in polar coordinates, and the power is measured for each angle using
- * the spatial filters proposed in [1].
+ * This plugin chops the image into square pieces, and computes their Fourier
+ * power spectra. The later are analyzed in polar coordinates, and the power is
+ * measured for each angle using the spatial filters proposed in [1].
  * 
  * <h3>Local gradient orientation</h3>
  * 
- * This method is a local analysis. The gradient of the image is calculated using a 5x5
- * Sobel filter, and is used to derive the local gradient orientation. This orientation 
- * is then used to build the histogram, by putting the square of the gradient norm 
- * in the adequate bin. The square of the norm was retained, so as to have an histogram 
- * with the same dimension that for the Fourier analysis.
+ * This method is a local analysis. The gradient of the image is calculated
+ * using a 5x5 Sobel filter, and is used to derive the local gradient
+ * orientation. This orientation is then used to build the histogram, by putting
+ * the square of the gradient norm in the adequate bin. The square of the norm
+ * was retained, so as to have an histogram with the same dimension that for the
+ * Fourier analysis.
  * 
  * 
  * <h2>Orientation map</h2>
  * 
- * Since version 2.0, the plugin offers the possibility to generate an orientation map,
- * where the image is colored according to its local directionality, or location orientation.
- * This has a well an easily defined meaning in the case of the local gradient orientation 
- * method, but things are a bit more complicated in the case of the Fourier component, which
- * is a global method. 
+ * Since version 2.0, the plugin offers the possibility to generate an
+ * orientation map, where the image is colored according to its local
+ * directionality, or location orientation. This has a well an easily defined
+ * meaning in the case of the local gradient orientation method, but things are
+ * a bit more complicated in the case of the Fourier component, which is a
+ * global method.
  * <p>
- * In the later case, the image is filtered using the Fourier filters described above, and 
- * transformed back using inverse Fourier transform. For each pixel, the direction retained
- * is the one that has the strongest intensity when filtered in this orientation.
- * <p> 
+ * In the later case, the image is filtered using the Fourier filters described
+ * above, and transformed back using inverse Fourier transform. For each pixel,
+ * the direction retained is the one that has the strongest intensity when
+ * filtered in this orientation.
+ * <p>
  * To generate the orientation map image, a HSB image is made by taking
  * <ul>
- * 	<li> the local orientation as hue
- * 	<li> the original image gray value as brightness
- * 	<li> for saturation:
- * 	<ul>
- * 		<li> the power spectrum value for the Fourier component method
- * 		<li> the gradient magnitude square for the Local gradient orientation method
+ * <li>the local orientation as hue
+ * <li>the original image gray value as brightness
+ * <li>for saturation:
+ * <ul>
+ * <li>the power spectrum value for the Fourier component method
+ * <li>the gradient magnitude square for the Local gradient orientation method
  * </ul>
  * </ul>
  * 
  * 
  * <h2>Code structure</h2>
  * 
- * This plugin is written as a classical ImageJ plugin. It implements {@link PlugIn}. 
+ * This plugin is written as a classical ImageJ plugin. It implements
+ * {@link PlugIn}.
  * <p>
  * String arguments can be passed to it, using the {@link #run(String)} method.
  * For instance:
  * 
- *  <pre>
- *  ImagePlus imp = IJ.openImage("./TwoLines.tif");
- *  imp.show();
- *  Directionality_ da = new Directionality_();
- *  da.run("nbins=60, start=-90, method=gradient");
- *  </pre>
+ * <pre>
+ * ImagePlus imp = IJ.openImage( "./TwoLines.tif" );
+ * imp.show();
+ * Directionality_ da = new Directionality_();
+ * da.run( "nbins=60, start=-90, method=gradient" );
+ * </pre>
  * 
- * It is also possible to run the plugin non-interactively from another class, or even in
- * a script. For instance in Python:
+ * It is also possible to run the plugin non-interactively from another class,
+ * or even in a script. For instance in Python:
  * 
- * 	<pre>
+ * <pre>
  * 	import fiji.analyze.directionality.Directionality_
  * 
  * 	# Instantiate plugin
@@ -177,41 +179,49 @@ import org.jfree.data.xy.XYSeriesCollection;
  *
  *	# Generate a color wheel
  *	fiji.analyze.directionality.Directionality_.generateColorWheel().show()
- *</pre>
+ * </pre>
  * 
  * <h2>Version history</h2>
  * 
  * <ul>
- * <li> v2.0 - 2010-06-08: After a lot of mistakes and problems, each method now propose to 
- * generate an orientation map, which colors the image according to the local directionality.
- * <li> v1.3 - 2010-03-17: Heavy refactoring, made it implement Plugin interface, so has to 
- * be conveniently called from a script.
- * <li> v1.2 - 2010-03-10: Added a new analysis method based on local gradient orientation.
- * <li> v1.1 - 2010-03-05: Added an option to export the histogram as a table, and option 
- * to circular-shifts the histogram.
- * <li> v1.0 - 2010-03-01: First working commit with the Fourier method.
+ * <li>v2.0 - 2010-06-08: After a lot of mistakes and problems, each method now
+ * propose to generate an orientation map, which colors the image according to
+ * the local directionality.
+ * <li>v1.3 - 2010-03-17: Heavy refactoring, made it implement Plugin interface,
+ * so has to be conveniently called from a script.
+ * <li>v1.2 - 2010-03-10: Added a new analysis method based on local gradient
+ * orientation.
+ * <li>v1.1 - 2010-03-05: Added an option to export the histogram as a table,
+ * and option to circular-shifts the histogram.
+ * <li>v1.0 - 2010-03-01: First working commit with the Fourier method.
  * </ul>
  * 
- * <h2>References</h2>
- * [1] Liu. Scale space approach to directional analysis of images. Appl. Opt. (1991) vol. 30 (11) pp. 1369-1373 
+ * <h2>References</h2> [1] Liu. Scale space approach to directional analysis of
+ * images. Appl. Opt. (1991) vol. 30 (11) pp. 1369-1373
  * <p>
- * A discussion with A. Leroy and another one with J. Schindelin are greatly acknowledged. 
+ * A discussion with A. Leroy and another one with J. Schindelin are greatly
+ * acknowledged.
  * <p>
  * 
  * @author Jean-Yves Tinevez jeanyves.tinevez@gmail.com
  * @version 2.0
  */
-public class Directionality_ implements PlugIn {
-	
+public class Directionality_ implements PlugIn
+{
+
 	/*
 	 * ENUMS
 	 */
-	
-	public enum AnalysisMethod {
+
+	public enum AnalysisMethod
+	{
 		FOURIER_COMPONENTS,
 		LOCAL_GRADIENT_ORIENTATION;
-		public String toString() {
-			switch (this) {
+		@Override
+		public String toString()
+		{
+			switch ( this )
+			{
 			case FOURIER_COMPONENTS:
 				return "Fourier components";
 			case LOCAL_GRADIENT_ORIENTATION:
@@ -219,8 +229,11 @@ public class Directionality_ implements PlugIn {
 			}
 			return "Not implemented";
 		}
-		public String toCommandName() {
-			switch (this) {
+
+		public String toCommandName()
+		{
+			switch ( this )
+			{
 			case FOURIER_COMPONENTS:
 				return "Fourier";
 			case LOCAL_GRADIENT_ORIENTATION:
@@ -229,874 +242,1019 @@ public class Directionality_ implements PlugIn {
 			return "Not implemented";
 		}
 	}
-	
-	
+
 	/*
 	 * FIELDS
 	 */
-	
+
 	/* CONSTANTS */
-	
-	private static final float FREQ_THRESHOLD = 5.0f; // get rid of pixels too close to the center in the FFT spectrum
-	/** How many sigmas away from the gaussian center we sum to get the amount value. */ 
+
+	// Get rid of pixels too close to the center in the FFT spectrum.
+	private static final float FREQ_THRESHOLD = 5.0f;
+
+	/**
+	 * How many sigmas away from the gaussian center we sum to get the amount
+	 * value.
+	 */
 	private static final double SIGMA_NUMBER = 2;
+
 	private static final String PLUGIN_NAME = "Directionality analysis";
+
 	private static final String VERSION_STR = "2.0.1";
-	
-	
-	/* USER SETTING FIELDS, memorized between runs*/
+
+	/* USER SETTING FIELDS, memorized between runs */
 	private static boolean setting_debug = false;
+
 	/** The number of bins to create. */
 	private static int setting_nbins = 90;
-	/** The first bin in degrees when displaying the histogram, so that we are not forced to start at -90 */
+
+	/**
+	 * The first bin in degrees when displaying the histogram, so that we are
+	 * not forced to start at -90
+	 */
 	private static double setting_bin_start = -90;
+
 	/** Method used for analysis, as set by the user. */
 	private static AnalysisMethod setting_method = AnalysisMethod.FOURIER_COMPONENTS;
-	/** If set true, will display a {@link ResultsTable} with the histogram at the end of processing. */
+
+	/**
+	 * If set true, will display a {@link ResultsTable} with the histogram at
+	 * the end of processing.
+	 */
 	private static boolean setting_display_table = false;
+
 	/** If true, will calculate a map of orientation. */
 	private static boolean setting_build_orientation_map = false;
+
 	/** If true, will display a color wheel to interpret the orientation map. */
 	private static boolean setting_display_color_wheel = false;
 
-	
 	/* SETTING FIELDS, they determine results */
-	
+
 	/** The ImagePlus this plugin operates on. */
 	protected ImagePlus imp;
+
 	/** If true, will display FFTs and filters. */
 	protected boolean debug = false;
+
 	/** The number of bins to create. */
 	protected int nbins = 90;
-	/** The first bin in degrees when displaying the histogram, so that we are not forced to start at -90 */
+
+	/**
+	 * The first bin in degrees when displaying the histogram, so that we are
+	 * not forced to start at -90
+	 */
 	private double bin_start = -90;
+
 	/** Method used for analysis, as set by the user. */
 	private AnalysisMethod method = AnalysisMethod.FOURIER_COMPONENTS;
-	/** If set true, will display a {@link ResultsTable} with the histogram at the end of processing. */
+
+	/**
+	 * If set true, will display a {@link ResultsTable} with the histogram at
+	 * the end of processing.
+	 */
 	private boolean display_table = false;
+
 	/** If true, will calculate a map of orientation. */
 	private boolean build_orientation_map = false;
+
 	/** If true, will display a color wheel to interpret the orientation map. */
 	private boolean display_color_wheel = false;
 
-
 	/* STD FIELDS */
-	
+
 	/** FloatProcessor to convert source ImageProcessor to. */
 	private FloatProcessor fip;
+
 	/** Fourier filters are stored as a stack */
 	protected ImageStack filters;
+
 	/** Polar coordinates, stored as a FloatProcessor. */
 	protected FloatProcessor window, r, theta;
+
 	protected int width, height, small_side, long_side, npady, npadx, step, pad_size;
-	/** The bin centers, in radians. Internally, they always range from -pi/2 to pi/2. */
+
+	/**
+	 * The bin centers, in radians. Internally, they always range from -pi/2 to
+	 * pi/2.
+	 */
 	protected double[] bins;
-	/** The directionality histogram, one array per processor (3 in the case of a ColorProcessor).*/
-	protected ArrayList<double[]> histograms;
-	
-	private FloatProcessor padded_square_block; 
+
+	/**
+	 * The directionality histogram, one array per processor (3 in the case of a
+	 * ColorProcessor).
+	 */
+	protected ArrayList< double[] > histograms;
+
+	private FloatProcessor padded_square_block;
+
 	private float[] window_pixels;
+
 	/** Store fit results when fit method is called. */
-	protected ArrayList<double[]> params_from_fit;
+	protected ArrayList< double[] > params_from_fit;
+
 	/** Store goodness of fit results when fit method is called. */
 	protected double[] goodness_of_fit;
+
 	/** Store a String representing the fitting function. */
 	protected String fit_string;
+
 	/** Used to pass the slice we are currently analyzing. */
 	private int slice_index;
+
 	/** This stack stores the orientation map. */
 	ImageStack orientation_map;
-	
-	
+
 	/*
 	 * PLUGIN METHODS
 	 */
-	
-	
+
 	/**
-	 * Called when this plugin is launched from ImageJ. 
-	 * This method
+	 * Called when this plugin is launched from ImageJ. This method
 	 * <ol>
-	 * 	<li> grabs the current ImagePlus
-	 * 	<li> displays the user dialog and sets setting fields accordingly
-	 * 	<li> calls the {@link #computeHistograms()} method, which computes the histograms
-	 * 	<li> calls the {@link #fitHistograms()} method, which fits the histograms
-	 * 	<li> display the results
+	 * <li>grabs the current ImagePlus
+	 * <li>displays the user dialog and sets setting fields accordingly
+	 * <li>calls the {@link #computeHistograms()} method, which computes the
+	 * histograms
+	 * <li>calls the {@link #fitHistograms()} method, which fits the histograms
+	 * <li>display the results
 	 * </ol>
 	 * <p>
-	 * If the method is called with String arguments, fields are set according to it, and
-	 * no dialog are displayed (macro recordable).
+	 * If the method is called with String arguments, fields are set according
+	 * to it, and no dialog are displayed (macro recordable).
 	 * 
-	 *  @param  arg  the string argument, for instance "nbins=90, start=-90, method=gradient"
+	 * @param arg
+	 *            the string argument, for instance "nbins=90, start=-90,
+	 *            method=gradient"
 	 */
-	public void run(String arg) {
-		
+	@Override
+	public void run( final String arg )
+	{
+
 		// Test if we get an image
 		imp = WindowManager.getCurrentImage();
-		if (null == imp) {
-			IJ.error("Directionality", "No images are open.");
+		if ( null == imp )
+		{
+			IJ.error( "Directionality", "No images are open." );
 			return;
 		}
-		
-		Roi roi = imp.getRoi();
-		if (null != roi)
-			imp = new Duplicator().run(imp, 1, imp.getNSlices());
+
+		final Roi roi = imp.getRoi();
+		if ( null != roi )
+			imp = new Duplicator().run( imp, 1, imp.getNSlices() );
 
 		// Non-interactive mode?
-		if (null != arg && arg.length() > 0) {
-			
+		if ( null != arg && arg.length() > 0 )
+		{
+
 			// Parse possible macro inputs
-			String str = parseArgumentString(arg, "nbins=");
-			if (null != str) {
-				try {
-					nbins = Integer.parseInt(str);
-				} catch (NumberFormatException nfe) {
-					IJ.error("Directionality: bad argument for number of bins: "+str);
+			String str = parseArgumentString( arg, "nbins=" );
+			if ( null != str )
+			{
+				try
+				{
+					nbins = Integer.parseInt( str );
+				}
+				catch ( final NumberFormatException nfe )
+				{
+					IJ.error( "Directionality: bad argument for number of bins: " + str );
 					return;
 				}
 			}
-			str = parseArgumentString(arg, "start=");
-			if (null != str) {
-				try {
-					bin_start = Double.parseDouble(str);
-				} catch (NumberFormatException nfe) {
-					IJ.error("Directionality: bad argument for start point: "+str);
+			str = parseArgumentString( arg, "start=" );
+			if ( null != str )
+			{
+				try
+				{
+					bin_start = Double.parseDouble( str );
+				}
+				catch ( final NumberFormatException nfe )
+				{
+					IJ.error( "Directionality: bad argument for start point: " + str );
 					return;
 				}
 			}
-			str = parseArgumentString(arg, "method=");
-			if (null != str) {
-				for (AnalysisMethod m : AnalysisMethod.values()) {
-					if (m.toCommandName().equalsIgnoreCase(str)) {
+			str = parseArgumentString( arg, "method=" );
+			if ( null != str )
+			{
+				for ( final AnalysisMethod m : AnalysisMethod.values() )
+				{
+					if ( m.toCommandName().equalsIgnoreCase( str ) )
+					{
 						method = m;
 					}
 				}
 			}
-		} else {
-			boolean userHasCanceled = showDialog();
-			if (userHasCanceled)
+		}
+		else
+		{
+			final boolean userHasCanceled = showDialog();
+			if ( userHasCanceled )
 				return;
 		}
-		
+
 		// Launch analysis, this will set the directionality field
 		computeHistograms();
-		
+
 		// Fit histograms
 		fitHistograms();
-		
+
 		// Display results
-		JFrame plot_frame = plotResults();
-		JFrame data_frame = displayFitAnalysis();
-		
+		final JFrame plot_frame = plotResults();
+		final JFrame data_frame = displayFitAnalysis();
+
 //		int x = Math.max(0, imp.getWindow().getLocation().x - plot_frame.getSize().width);
 //		int y = imp.getWindow().getLocation().y;
 //		plot_frame.setLocation(x, y);
-		
+
 //		y += plot_frame.getHeight();
 //		if (y>Toolkit.getDefaultToolkit().getScreenSize().getHeight()) {
 //			y = (int) (0.9 * Toolkit.getDefaultToolkit().getScreenSize().getHeight());
 //		}
 //		data_frame.setLocation(x, y);
-		plot_frame.setLocationRelativeTo(imp.getWindow());
-		data_frame.setLocationRelativeTo(plot_frame);
-		plot_frame.setVisible(true);
-		data_frame.setVisible(true);
-		
-		if (display_table) {
-			ResultsTable table = displayResultsTable();
-			table.show("Directionality histograms for "+imp.getShortTitle()+" (using "+method.toString()+")");
+		plot_frame.setLocationRelativeTo( imp.getWindow() );
+		data_frame.setLocationRelativeTo( plot_frame );
+		plot_frame.setVisible( true );
+		data_frame.setVisible( true );
+
+		if ( display_table )
+		{
+			final ResultsTable table = displayResultsTable();
+			table.show( "Directionality histograms for " + imp.getShortTitle() + " (using " + method.toString() + ")" );
 		}
-		
-		if (build_orientation_map) {
-			ImagePlus imp_map = new ImagePlus("Orientation map for "+imp.getShortTitle(), orientation_map);
+
+		if ( build_orientation_map )
+		{
+			final ImagePlus imp_map = new ImagePlus( "Orientation map for " + imp.getShortTitle(), orientation_map );
 			imp_map.show();
-			ImageCanvas canvas_map = imp_map.getCanvas();
-			addColorMouseListener(canvas_map);
+			final ImageCanvas canvas_map = imp_map.getCanvas();
+			addColorMouseListener( canvas_map );
 		}
-		
-		if (display_color_wheel) {
-			ImagePlus cw = generateColorWheel();
+
+		if ( display_color_wheel )
+		{
+			final ImagePlus cw = generateColorWheel();
 			cw.show();
-			ImageCanvas canvas_cw = cw.getCanvas();
-			addColorMouseListener(canvas_cw);
+			final ImageCanvas canvas_cw = cw.getCanvas();
+			addColorMouseListener( canvas_cw );
 		}
 	}
-	
-	
-	
-	
-	
-	
-	
 
 	/*
 	 * PUBLIC METHODS
 	 */
 
-
-	
-	
-	
 	/**
-	 * This method runs the analysis on all slices, and store resulting histograms in the 
-	 * {@link #histograms} fields. Calling this method resets the aforementioned field.
+	 * This method runs the analysis on all slices, and store resulting
+	 * histograms in the {@link #histograms} fields. Calling this method resets
+	 * the aforementioned field.
 	 */
-	public void computeHistograms() {
-		if (null == imp) return;
-		
+	public void computeHistograms()
+	{
+		if ( null == imp )
+			return;
+
 		// Reset analysis fields
 		params_from_fit = null;
 		goodness_of_fit = null;
-		
+
 		// Prepare helper fields
-		bins = prepareBins(nbins);
-		switch (method) {
+		bins = prepareBins( nbins );
+		switch ( method )
+		{
 		case FOURIER_COMPONENTS:
 			initFourierFields();
 			break;
 		case LOCAL_GRADIENT_ORIENTATION:
-			break;		
+			break;
 		}
 
 		// Prepare result holder
-		int n_slices = imp.getStackSize();
-		histograms = new ArrayList<double[]>(n_slices * imp.getNChannels()); 
-		if (build_orientation_map) {
-			orientation_map = new ImageStack(imp.getWidth(), imp.getHeight());
+		final int n_slices = imp.getStackSize();
+		histograms = new ArrayList< double[] >( n_slices * imp.getNChannels() );
+		if ( build_orientation_map )
+		{
+			orientation_map = new ImageStack( imp.getWidth(), imp.getHeight() );
 		}
-		
+
 		// Loop over each slice
 		ImageProcessor ip = null;
 		double[] dir = null;
-		for (int i = 0; i < n_slices; i++) {
+		for ( int i = 0; i < n_slices; i++ )
+		{
 			slice_index = i;
-			ip = imp.getStack().getProcessor(i+1);
-			for (int channel_number = 0; channel_number < ip.getNChannels(); channel_number++) {
-				
+			ip = imp.getStack().getProcessor( i + 1 );
+			for ( int channel_number = 0; channel_number < ip.getNChannels(); channel_number++ )
+			{
+
 				// Convert to float processor
-				fip = ip.toFloat(channel_number, fip);
-				
+				fip = ip.toFloat( channel_number, fip );
+
 				// Dispatch to specialized method
-				switch (method) {
+				switch ( method )
+				{
 				case FOURIER_COMPONENTS:
-					dir = fourier_component(fip);
+					dir = fourier_component( fip );
 					break;
 				case LOCAL_GRADIENT_ORIENTATION:
-					dir = local_gradient_orientation(fip);
+					dir = local_gradient_orientation( fip );
 					break;
 				}
-				
+
 				// Normalize directionality
-				double sum = dir[0];
-				for (int j = 1; j < dir.length; j++) {
-					sum += dir[j];
+				double sum = dir[ 0 ];
+				for ( int j = 1; j < dir.length; j++ )
+				{
+					sum += dir[ j ];
 				}
-				for (int j = 0; j < dir.length; j++) {
-					dir[j] = dir[j] / sum;
+				for ( int j = 0; j < dir.length; j++ )
+				{
+					dir[ j ] = dir[ j ] / sum;
 				}
-				
+
 				histograms.add( dir );
 			}
 		}
 	}
-	
+
 	/**
-	 * This method generates a {@link ResultsTable} containing the histogram data for display 
-	 * in ImageJ. It can be used to export the data to a CSV file.
+	 * This method generates a {@link ResultsTable} containing the histogram
+	 * data for display in ImageJ. It can be used to export the data to a CSV
+	 * file.
 	 * 
-	 * @return  the result table, which show() method must be called to become visible.
+	 * @return the result table, which show() method must be called to become
+	 *         visible.
 	 */
-	public ResultsTable displayResultsTable() {
-		if (null == histograms) 
+	public ResultsTable displayResultsTable()
+	{
+		if ( null == histograms )
 			return null;
-		
-		// Wrap shifting angle to [-90  90[
-		double wrapped_angle = ((bin_start+90)  % 180 + 180) % 180 - 90;
+
+		// Wrap shifting angle to [-90 90[
+		final double wrapped_angle = ( ( bin_start + 90 ) % 180 + 180 ) % 180 - 90;
 		int wrap_index = 0;
-		for (int i = 0; i < bins.length; i++) {
-			if (wrapped_angle <= Math.toDegrees(bins[i])) {
+		for ( int i = 0; i < bins.length; i++ )
+		{
+			if ( wrapped_angle <= Math.toDegrees( bins[ i ] ) )
+			{
 				wrap_index = i;
-				break;				
+				break;
 			}
 		}
-		
-		double[] wrapped_bins = new double[nbins];
-		for (int i = 0; i < wrapped_bins.length; i++) {
-			wrapped_bins[i] = Math.toDegrees(bins[wrap_index] + (bins[1]-bins[0])*i);
+
+		final double[] wrapped_bins = new double[ nbins ];
+		for ( int i = 0; i < wrapped_bins.length; i++ )
+		{
+			wrapped_bins[ i ] = Math.toDegrees( bins[ wrap_index ] + ( bins[ 1 ] - bins[ 0 ] ) * i );
 		}
-		
-		ResultsTable table = new ResultsTable();
-		table.setPrecision(9);
-		String[] names = makeNames();
+
+		final ResultsTable table = new ResultsTable();
+		table.setPrecision( 9 );
+		final String[] names = makeNames();
 		double[] dir;
 		int index = 0;
-		for (int i = wrap_index; i < bins.length; i++) {
+		for ( int i = wrap_index; i < bins.length; i++ )
+		{
 			table.incrementCounter();
-			table.addValue("Direction (°)", wrapped_bins[index]);
-			for (int j = 0; j < names.length; j++) {
-				dir = histograms.get(j);
-				table.addValue(names[j], dir[i]);
-				double val = CurveFitter.f(CurveFitter.GAUSSIAN, params_from_fit.get(j), bins[i]);
-				table.addValue(names[j]+"-fit", val);
+			table.addValue( "Direction (°)", wrapped_bins[ index ] );
+			for ( int j = 0; j < names.length; j++ )
+			{
+				dir = histograms.get( j );
+				table.addValue( names[ j ], dir[ i ] );
+				final double val = CurveFitter.f( CurveFitter.GAUSSIAN, params_from_fit.get( j ), bins[ i ] );
+				table.addValue( names[ j ] + "-fit", val );
 			}
 			index++;
 		}
-		for (int i = 0; i < wrap_index; i++) {
+		for ( int i = 0; i < wrap_index; i++ )
+		{
 			table.incrementCounter();
-			table.addValue("Direction (°)", wrapped_bins[index]);
-			for (int j = 0; j < names.length; j++) {
-				dir = histograms.get(j);
-				table.addValue(names[j], dir[i]);
-				double val = CurveFitter.f(CurveFitter.GAUSSIAN, params_from_fit.get(j), bins[i]);
-				table.addValue(names[j]+"-fit", val);
+			table.addValue( "Direction (°)", wrapped_bins[ index ] );
+			for ( int j = 0; j < names.length; j++ )
+			{
+				dir = histograms.get( j );
+				table.addValue( names[ j ], dir[ i ] );
+				final double val = CurveFitter.f( CurveFitter.GAUSSIAN, params_from_fit.get( j ), bins[ i ] );
+				table.addValue( names[ j ] + "-fit", val );
 			}
 			index++;
 		}
 
-		return table;		
+		return table;
 	}
-	
+
 	/**
-	 * Return the result of analyzing the gaussian fit of the peak.
-	 * Results are returned in the shape of an ArrayList of double[], one element
-	 * per slice. The content of the double arrays is as follow:
+	 * Return the result of analyzing the gaussian fit of the peak. Results are
+	 * returned in the shape of an ArrayList of double[], one element per slice.
+	 * The content of the double arrays is as follow:
 	 * <ol start=0>
-	 * 	<li> gaussian peak center
-	 * 	<li> gaussian standard deviation
-	 * 	<li> amount, that is: the sum of the histogram data from the gaussian center until {@value #SIGMA_NUMBER} times
-	 * its standard deviation away
-	 * 	<li> the goodness of fit 
+	 * <li>gaussian peak center
+	 * <li>gaussian standard deviation
+	 * <li>amount, that is: the sum of the histogram data from the gaussian
+	 * center until {@value #SIGMA_NUMBER} times its standard deviation away
+	 * <li>the goodness of fit
 	 * </ol>
-	 * The periodic nature of the data is taken into account. For the amount value, the actual values
-	 * of the histogram are summed, not the values from the fit.
+	 * The periodic nature of the data is taken into account. For the amount
+	 * value, the actual values of the histogram are summed, not the values from
+	 * the fit.
 	 * 
 	 * 
-	 * @return  the fit analysis
+	 * @return the fit analysis
 	 */
-	public ArrayList<double[]> getFitAnalysis() {
-		if (null == histograms)
+	public ArrayList< double[] > getFitAnalysis()
+	{
+		if ( null == histograms )
 			return null;
-		
-		final ArrayList<double[]> fit_analysis = new ArrayList<double[]>(histograms.size());
-		double[] gof = getGoodnessOfFit();
+
+		final ArrayList< double[] > fit_analysis = new ArrayList< double[] >( histograms.size() );
+		final double[] gof = getGoodnessOfFit();
 		double[] params = null;
 		double[] dir = null;
 		double[] analysis = null;
 		double amount, center, std, xn;
-		
-		for (int i = 0; i < histograms.size(); i++) {
-			params =  params_from_fit.get(i);
-			dir = histograms.get(i);
-			analysis = new double[4];
-			
-			amount = 0; // we sum under +/- N*sigma, taking periodicity into account
-			center = params[2];
-			std = params[3];
-			for (int j = 0; j < dir.length; j++) {
-				xn = bins[j];
-				if (Math.abs(xn-center) > 90.0 ) { // too far, we want to shift then
-					if (xn>center) {
-						xn = xn - 180.0;							
-					} else {
+
+		for ( int i = 0; i < histograms.size(); i++ )
+		{
+			params = params_from_fit.get( i );
+			dir = histograms.get( i );
+			analysis = new double[ 4 ];
+
+			amount = 0; // we sum under +/- N*sigma, taking periodicity into
+						// account
+			center = params[ 2 ];
+			std = params[ 3 ];
+			for ( int j = 0; j < dir.length; j++ )
+			{
+				xn = bins[ j ];
+				if ( Math.abs( xn - center ) > 90.0 )
+				{ // too far, we want to shift then
+					if ( xn > center )
+					{
+						xn = xn - 180.0;
+					}
+					else
+					{
 						xn = xn + 180.0;
 					}
 				}
-				if ( (xn<center-SIGMA_NUMBER*std) || (xn>center+SIGMA_NUMBER*std) ) {
+				if ( ( xn < center - SIGMA_NUMBER * std ) || ( xn > center + SIGMA_NUMBER * std ) )
+				{
 					continue;
 				}
-				amount += dir[j];
+				amount += dir[ j ];
 			}
-			
-			analysis[0] = center;
-			analysis[1] = std;
-			analysis[2] = amount;
-			analysis[3] = gof[i];
-			fit_analysis.add(analysis);
+
+			analysis[ 0 ] = center;
+			analysis[ 1 ] = std;
+			analysis[ 2 ] = amount;
+			analysis[ 3 ] = gof[ i ];
+			fit_analysis.add( analysis );
 		}
 		return fit_analysis;
 	}
-	
+
 	/**
-	 * This method is called to draw the histograms resulting from image analysis. It reads the result
-	 * in the {@link #histograms} list field, and use the JFreeChart library to draw a nice 
-	 * plot window. If the {@code fitResults()} method was called before, the fits are also drawn.
+	 * This method is called to draw the histograms resulting from image
+	 * analysis. It reads the result in the {@link #histograms} list field, and
+	 * use the JFreeChart library to draw a nice plot window. If the
+	 * {@code fitResults()} method was called before, the fits are also drawn.
 	 * 
-	 * @return  a {@link JFrame} containing the histogram plots, which setVisible(boolean) method must
-	 * be called in order to be displayed
+	 * @return a {@link JFrame} containing the histogram plots, which
+	 *         setVisible(boolean) method must be called in order to be
+	 *         displayed
 	 */
-	public JFrame plotResults() {
+	public JFrame plotResults()
+	{
 		final XYSeriesCollection histogram_plots = new XYSeriesCollection();
-		final LookupPaintScale lut = createLUT(histograms.size());
+		final LookupPaintScale lut = createLUT( histograms.size() );
 		final String[] names = makeNames();
 		XYSeries series;
-		
+
 		// Shift histograms
-		
-		// Wrap shifting angle to [-90  90[
-		double wrapped_angle = ((bin_start+90)  % 180 + 180) % 180 - 90;
+
+		// Wrap shifting angle to [-90 90[
+		final double wrapped_angle = ( ( bin_start + 90 ) % 180 + 180 ) % 180 - 90;
 		int wrap_index = 0;
-		for (int i = 0; i < bins.length; i++) {
-			if (wrapped_angle <= Math.toDegrees(bins[i])) {
+		for ( int i = 0; i < bins.length; i++ )
+		{
+			if ( wrapped_angle <= Math.toDegrees( bins[ i ] ) )
+			{
 				wrap_index = i;
-				break;				
+				break;
 			}
 		}
-		
+
 		// Wrap bins
-		double[] wrapped_bins = new double[nbins];
-		for (int i = 0; i < wrapped_bins.length; i++) {
-			wrapped_bins[i] = Math.toDegrees(bins[wrap_index] + (bins[1]-bins[0])*i);
+		final double[] wrapped_bins = new double[ nbins ];
+		for ( int i = 0; i < wrapped_bins.length; i++ )
+		{
+			wrapped_bins[ i ] = Math.toDegrees( bins[ wrap_index ] + ( bins[ 1 ] - bins[ 0 ] ) * i );
 		}
-		
+
 		// This is where we shift histograms
 		double[] dir;
-		for (int i = 0; i < histograms.size(); i++) {
-			dir = histograms.get(i);
-			series = new XYSeries(names[i]);
+		for ( int i = 0; i < histograms.size(); i++ )
+		{
+			dir = histograms.get( i );
+			series = new XYSeries( names[ i ] );
 			int index = 0;
-			for (int j = wrap_index; j < nbins; j++) { 
-				series.add(wrapped_bins[index], dir[j]);
+			for ( int j = wrap_index; j < nbins; j++ )
+			{
+				series.add( wrapped_bins[ index ], dir[ j ] );
 				index++;
 			}
-			for (int j = 0; j < wrap_index; j++) { 
-				series.add(wrapped_bins[index], dir[j]);
+			for ( int j = 0; j < wrap_index; j++ )
+			{
+				series.add( wrapped_bins[ index ], dir[ j ] );
 				index++;
 			}
-			histogram_plots.addSeries(series);
+			histogram_plots.addSeries( series );
 		}
-		histogram_plots.setIntervalWidth(Math.toDegrees(bins[1]-bins[0]));
-		
+		histogram_plots.setIntervalWidth( Math.toDegrees( bins[ 1 ] - bins[ 0 ] ) );
+
 		// Create chart with histograms
 		final JFreeChart chart = ChartFactory.createHistogram(
 				"Directionality histograms",
 				"Direction (°)",
-				"Amount", 
-				histogram_plots, 
+				"Amount",
+				histogram_plots,
 				PlotOrientation.VERTICAL,
 				true,
 				true,
-				false);
-		
+				false );
+
 		// Set the look of histograms
-		final XYPlot plot = (XYPlot) chart.getPlot();
-		final ClusteredXYBarRenderer renderer = new ClusteredXYBarRenderer(0.3, false);
+		final XYPlot plot = ( XYPlot ) chart.getPlot();
+		final ClusteredXYBarRenderer renderer = new ClusteredXYBarRenderer( 0.3, false );
 		float color_index;
-		for (int i = 0; i < histograms.size(); i++) {
-			color_index = (float)i/(float)(histograms.size()-1);
-			renderer.setSeriesPaint(i, lut.getPaint(color_index) );
+		for ( int i = 0; i < histograms.size(); i++ )
+		{
+			color_index = ( float ) i / ( float ) ( histograms.size() - 1 );
+			renderer.setSeriesPaint( i, lut.getPaint( color_index ) );
 		}
-		plot.setRenderer(0, renderer);
-		
+		plot.setRenderer( 0, renderer );
+
 		// Draw fit results
-		if (null != params_from_fit) {
+		if ( null != params_from_fit )
+		{
 			// Make new X
-			final double[] X = new double[bins.length*10]; // oversample 10 times
-			for (int i = 0; i < X.length; i++) {
-				X[i] = (wrapped_bins[0] + (wrapped_bins[nbins-1]-wrapped_bins[0])/X.length * i);
+			final double[] X = new double[ bins.length * 10 ]; // oversample 10
+																// times
+			for ( int i = 0; i < X.length; i++ )
+			{
+				X[ i ] = ( wrapped_bins[ 0 ] + ( wrapped_bins[ nbins - 1 ] - wrapped_bins[ 0 ] ) / X.length * i );
 			}
 			// Create dataset
 			final XYSeriesCollection fits = new XYSeriesCollection();
 			XYSeries fit_series;
 			double val, center, xn;
 			double[] params;
-			final double half_range = Math.PI/2;
-			for (int i = 0; i < histograms.size(); i++) { // we have to deal with periodic issue here too
-				params = params_from_fit.get(i).clone();
-				center = params[2];
-				fit_series = new XYSeries(names[i]);
-				for (int j = 0; j < X.length; j++) {
-					xn = Math.toRadians(X[j]); // back to radians, for the fit
-					if (Math.abs(xn-center) > half_range ) { // too far
-						if (xn>center) {
-							xn = xn - 2*half_range;							
-						} else {
-							xn = xn + 2*half_range;
+			final double half_range = Math.PI / 2;
+			for ( int i = 0; i < histograms.size(); i++ )
+			{ // we have to deal with periodic issue here too
+				params = params_from_fit.get( i ).clone();
+				center = params[ 2 ];
+				fit_series = new XYSeries( names[ i ] );
+				for ( int j = 0; j < X.length; j++ )
+				{
+					xn = Math.toRadians( X[ j ] ); // back to radians, for the
+													// fit
+					if ( Math.abs( xn - center ) > half_range )
+					{ // too far
+						if ( xn > center )
+						{
+							xn = xn - 2 * half_range;
+						}
+						else
+						{
+							xn = xn + 2 * half_range;
 						}
 					}
-					val = CurveFitter.f(CurveFitter.GAUSSIAN, params, xn);
-					fit_series.add(X[j], val);
+					val = CurveFitter.f( CurveFitter.GAUSSIAN, params, xn );
+					fit_series.add( X[ j ], val );
 				}
-				fits.addSeries(fit_series);
+				fits.addSeries( fit_series );
 			}
-			plot.setDataset(1, fits);
-			plot.setRenderer(1, new XYLineAndShapeRenderer(true, false));
-			for (int i = 0; i < histograms.size(); i++) {
-				color_index = (float)i/(float)(histograms.size()-1);
-				plot.getRenderer(1).setSeriesPaint(i, lut.getPaint(color_index) );
+			plot.setDataset( 1, fits );
+			plot.setRenderer( 1, new XYLineAndShapeRenderer( true, false ) );
+			for ( int i = 0; i < histograms.size(); i++ )
+			{
+				color_index = ( float ) i / ( float ) ( histograms.size() - 1 );
+				plot.getRenderer( 1 ).setSeriesPaint( i, lut.getPaint( color_index ) );
 			}
-			
+
 		}
-		plot.getDomainAxis().setRange(wrapped_bins[0], wrapped_bins[nbins-1]);
-		
-		final ChartPanel chartPanel = new ChartPanel(chart);
-		chartPanel.setPreferredSize(new java.awt.Dimension(500, 270));
-		JFrame window = new JFrame("Directionality for "+imp.getShortTitle()+" (using "+method.toString()+")");
-        window.add(chartPanel);
-        window.validate();
-        window.setSize(new java.awt.Dimension(500, 270));
-        return window;
+		plot.getDomainAxis().setRange( wrapped_bins[ 0 ], wrapped_bins[ nbins - 1 ] );
+
+		final ChartPanel chartPanel = new ChartPanel( chart );
+		chartPanel.setPreferredSize( new java.awt.Dimension( 500, 270 ) );
+		final JFrame window = new JFrame( "Directionality for " + imp.getShortTitle() + " (using " + method.toString() + ")" );
+		window.add( chartPanel );
+		window.validate();
+		window.setSize( new java.awt.Dimension( 500, 270 ) );
+		return window;
 	}
-	
+
 	/**
-	 * This method tries to fit a gaussian to the highest peak of each directionality histogram, 
-	 * and store fit results in the {@link #params_from_fit} field. The goodness of fit will be
-	 * stored in {@link #goodness_of_fit}.
+	 * This method tries to fit a gaussian to the highest peak of each
+	 * directionality histogram, and store fit results in the
+	 * {@link #params_from_fit} field. The goodness of fit will be stored in
+	 * {@link #goodness_of_fit}.
 	 */
-	public void fitHistograms() {
-		if (null == histograms)
+	public void fitHistograms()
+	{
+		if ( null == histograms )
 			return;
-		
-		params_from_fit = new ArrayList<double[]>(histograms.size());
-		goodness_of_fit = new double[histograms.size()];
+
+		params_from_fit = new ArrayList< double[] >( histograms.size() );
+		goodness_of_fit = new double[ histograms.size() ];
 		double[] dir;
-		double[] init_params = new double[4];
-		double[] params = new double[4];
+		final double[] init_params = new double[ 4 ];
+		double[] params = new double[ 4 ];
 		double[] padded_dir;
 		double[] padded_bins;
-		
+
 		double ymax, ymin;
 		int imax, shift_index, current_index;
-		
+
 		// Prepare fitter and function
 		CurveFitter fitter = null;
-		
+
 		// Loop over slices
-		for (int i = 0; i < histograms.size(); i++) {
-			
-			dir = histograms.get(i);
-			
+		for ( int i = 0; i < histograms.size(); i++ )
+		{
+
+			dir = histograms.get( i );
+
 			// Infer initial values
 			ymax = Double.NEGATIVE_INFINITY;
 			ymin = Double.POSITIVE_INFINITY;
 			imax = 0;
-			for (int j = 0; j < dir.length; j++) {
-				if (dir[j] > ymax) {
-					ymax = dir[j];
+			for ( int j = 0; j < dir.length; j++ )
+			{
+				if ( dir[ j ] > ymax )
+				{
+					ymax = dir[ j ];
 					imax = j;
 				}
-				if (dir[j]<ymin) {
-					ymin = dir[j];
+				if ( dir[ j ] < ymin )
+				{
+					ymin = dir[ j ];
 				}
 			}
-						
+
 			// Shift found peak to the center (periodic issue) and add to fitter
-			padded_dir 	= new double[bins.length];
-			padded_bins = new double[bins.length];
-			shift_index = bins.length/2 - imax;
-			for (int j = 0; j < bins.length; j++) {
+			padded_dir = new double[ bins.length ];
+			padded_bins = new double[ bins.length ];
+			shift_index = bins.length / 2 - imax;
+			for ( int j = 0; j < bins.length; j++ )
+			{
 				current_index = j - shift_index;
-				if (current_index < 0) {
-					current_index += bins.length; 
+				if ( current_index < 0 )
+				{
+					current_index += bins.length;
 				}
-				if (current_index >= bins.length) {
+				if ( current_index >= bins.length )
+				{
 					current_index -= bins.length;
 				}
-				padded_dir[j] 	= dir[current_index];
-				padded_bins[j] 	= bins[j];
-			}			
-			fitter = new CurveFitter(padded_bins, padded_dir);
-			
-			init_params[0] = ymin; // base
-			init_params[1] = ymax; // peak value 
-			init_params[2] = padded_bins[bins.length/2]; // peak center with padding
-			init_params[3] = 2 * ( bins[1] - bins[0]); // std
-			
-			// Do fit
-			fitter.doFit(CurveFitter.GAUSSIAN);
-			params = fitter.getParams();
-			goodness_of_fit[i] = fitter.getFitGoodness();
-			if (shift_index < 0) { // back into orig coordinates
-				params[2] += (bins[-shift_index]-bins[0]);
-			} else {
-				params[2] -= (bins[shift_index]-bins[0]);
+				padded_dir[ j ] = dir[ current_index ];
+				padded_bins[ j ] = bins[ j ];
 			}
-			params[3] = Math.abs(params[3]); // std is positive
-			params_from_fit.add(params);
+			fitter = new CurveFitter( padded_bins, padded_dir );
+
+			init_params[ 0 ] = ymin; // base
+			init_params[ 1 ] = ymax; // peak value
+			init_params[ 2 ] = padded_bins[ bins.length / 2 ]; // peak center
+																// with padding
+			init_params[ 3 ] = 2 * ( bins[ 1 ] - bins[ 0 ] ); // std
+
+			// Do fit
+			fitter.doFit( CurveFitter.GAUSSIAN );
+			params = fitter.getParams();
+			goodness_of_fit[ i ] = fitter.getFitGoodness();
+			if ( shift_index < 0 )
+			{ // back into orig coordinates
+				params[ 2 ] += ( bins[ -shift_index ] - bins[ 0 ] );
+			}
+			else
+			{
+				params[ 2 ] -= ( bins[ shift_index ] - bins[ 0 ] );
+			}
+			params[ 3 ] = Math.abs( params[ 3 ] ); // std is positive
+			params_from_fit.add( params );
 		}
 		fit_string = fitter.getFormula();
 	}
-	
+
 	/**
 	 * This method displays the fit analysis results in a {@link JTable}.
 	 * 
-	 * @return  a {@link JFrame} containing the table; its setVisible(boolean) method must
-	 * be called in order to be displayed
+	 * @return a {@link JFrame} containing the table; its setVisible(boolean)
+	 *         method must be called in order to be displayed
 	 */
-	public JFrame displayFitAnalysis() {
-		if (null == params_from_fit) {
-			return null;
-		}
+	public JFrame displayFitAnalysis()
+	{
+		if ( null == params_from_fit ) { return null; }
 		// Display result
-		String[] column_names = {
+		final String[] column_names = {
 				"Slice",
 				"Direction (°)",
 				"Dispersion (°)",
 				"Amount",
 				"Goodness" };
-		Object[][]  table_data = new Object[params_from_fit.size()][column_names.length];
+		final Object[][] table_data = new Object[ params_from_fit.size() ][ column_names.length ];
 		final String[] names = makeNames();
-		final ArrayList<double[]> fit_analysis = getFitAnalysis();
+		final ArrayList< double[] > fit_analysis = getFitAnalysis();
 		double[] analysis = null;
-		
-		for (int i = 0; i < table_data.length; i++) {
-			analysis = fit_analysis.get(i);
-			table_data[i][0]	= names[i];
-			table_data[i][1]	= String.format("%.2f", Math.toDegrees(analysis[0])); // peak center
-			table_data[i][2]	= String.format("%.2f", Math.toDegrees(analysis[1])); // standard deviation
-			table_data[i][3] 	= String.format("%.2f", analysis[2]); // amount
-			table_data[i][4] 	= String.format("%.2f", analysis[3]); // goodness of fit
+
+		for ( int i = 0; i < table_data.length; i++ )
+		{
+			analysis = fit_analysis.get( i );
+			table_data[ i ][ 0 ] = names[ i ];
+			table_data[ i ][ 1 ] = String.format( "%.2f", Math.toDegrees( analysis[ 0 ] ) ); // peak
+																								// center
+			table_data[ i ][ 2 ] = String.format( "%.2f", Math.toDegrees( analysis[ 1 ] ) ); // standard
+																								// deviation
+			table_data[ i ][ 3 ] = String.format( "%.2f", analysis[ 2 ] ); // amount
+			table_data[ i ][ 4 ] = String.format( "%.2f", analysis[ 3 ] ); // goodness
+																			// of
+																			// fit
 		}
-		JTable table = new JTable(table_data, column_names);
-		table.setPreferredScrollableViewportSize(new Dimension(500, 70));
+		final JTable table = new JTable( table_data, column_names );
+		table.setPreferredScrollableViewportSize( new Dimension( 500, 70 ) );
 
-		JScrollPane scrollPane = new JScrollPane(table);
-		table.setAutoResizeMode(JTable.AUTO_RESIZE_ALL_COLUMNS);
-		
-		JPanel		table_panel = new JPanel(new GridLayout());
-		table_panel.add(scrollPane);	
-	    JFrame 		frame = new JFrame("Directionality analysis for "+imp.getShortTitle()+" (using "+method.toString()+")");
+		final JScrollPane scrollPane = new JScrollPane( table );
+		table.setAutoResizeMode( JTable.AUTO_RESIZE_ALL_COLUMNS );
 
-	    frame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
-	    //Create and set up the content pane.
-	    frame.setContentPane(table_panel);
+		final JPanel table_panel = new JPanel( new GridLayout() );
+		table_panel.add( scrollPane );
+		final JFrame frame = new JFrame( "Directionality analysis for " + imp.getShortTitle() + " (using " + method.toString() + ")" );
 
-	    //Display the window.
-	    frame.pack();
-	    return frame;
+		frame.setDefaultCloseOperation( JFrame.DISPOSE_ON_CLOSE );
+		// Create and set up the content pane.
+		frame.setContentPane( table_panel );
+
+		// Display the window.
+		frame.pack();
+		return frame;
 	}
-	
-	
-	
-	
-	
-	
-	
-	
+
 	/*
 	 * SETTERS AND GETTERS
 	 */
-	
-	
-	
+
 	/**
-	 * Set the image for analysis. Calling this method resets the field {@link #histograms} to null.
+	 * Set the image for analysis. Calling this method resets the field
+	 * {@link #histograms} to null.
 	 */
-	public void setImagePlus(ImagePlus imp) {
+	public void setImagePlus( final ImagePlus imp )
+	{
 		this.imp = imp;
 		histograms = null;
 	}
-	
+
 	/**
 	 * Get the image analyzed.
 	 */
-	public ImagePlus getImagePlus() {
+	public ImagePlus getImagePlus()
+	{
 		return imp;
 	}
-	
+
 	/**
-	 * Return the parameters of the gaussian fit of the main peak in histogram. Results
-	 * are arranged in an ArrayList of double[], one array per slice analyzed.
-	 * If the fit was not done prior to this method call, it is called. If the 
-	 * method {@link #computeHistograms()} was not called, null is returned.
+	 * Return the parameters of the gaussian fit of the main peak in histogram.
+	 * Results are arranged in an ArrayList of double[], one array per slice
+	 * analyzed. If the fit was not done prior to this method call, it is
+	 * called. If the method {@link #computeHistograms()} was not called, null
+	 * is returned.
 	 * <p>
-	 * The double array is organized as follow, for the fitting model y = a + (b-a)*exp(-(x-c)*(x-c)/(2*d*d))
+	 * The double array is organized as follow, for the fitting model y = a +
+	 * (b-a)*exp(-(x-c)*(x-c)/(2*d*d))
 	 * <ol start=0>
-	 * 	<li> a
-	 * 	<li> b
-	 *  <li> x
-	 *  <li> d
+	 * <li>a
+	 * <li>b
+	 * <li>x
+	 * <li>d
 	 * </ol>
 	 *
 	 * <p>
-	 * See {@link #getGoodnessOfFit()}, {@link #getHistograms()}, {@link #getBins()}
+	 * See {@link #getGoodnessOfFit()}, {@link #getHistograms()},
+	 * {@link #getBins()}
 	 * </p>
-	 * @return  the fitting parameters
+	 * 
+	 * @return the fitting parameters
 	 */
-	public ArrayList<double[]> getFitParameters() {
-		if (null == params_from_fit) {
+	public ArrayList< double[] > getFitParameters()
+	{
+		if ( null == params_from_fit )
+		{
 			fitHistograms();
 		}
 		return params_from_fit;
 	}
-	
-	/** 
-	 * Return the goodness of fit for the gaussian fit; 1 is good, 0 is bad. One value per slice.
-	 * If the fit was not done prior to this method call, it is called. If the 
-	 * method {@link #computeHistograms()} was not called, null is returned.
+
+	/**
+	 * Return the goodness of fit for the gaussian fit; 1 is good, 0 is bad. One
+	 * value per slice. If the fit was not done prior to this method call, it is
+	 * called. If the method {@link #computeHistograms()} was not called, null
+	 * is returned.
 	 * <p>
-	 * See {@link #getFitParameters()}, {@link #getHistograms()}, {@link #getBins()}
+	 * See {@link #getFitParameters()}, {@link #getHistograms()},
+	 * {@link #getBins()}
 	 * </p>
+	 * 
 	 * @return the goodness of fit
 	 */
-	public double[] getGoodnessOfFit() {
-		if (null == params_from_fit) {
+	public double[] getGoodnessOfFit()
+	{
+		if ( null == params_from_fit )
+		{
 			fitHistograms();
 		}
 		return goodness_of_fit;
 	}
-	
+
 	/**
-	 * Return the directionality histograms as an ArrayList of double[], one array
-	 * per slice.
+	 * Return the directionality histograms as an ArrayList of double[], one
+	 * array per slice.
 	 * <p>
-	 * See {@link #getBins()}, {@link #getFitParameters()}, {@link #getGoodnessOfFit()}
+	 * See {@link #getBins()}, {@link #getFitParameters()},
+	 * {@link #getGoodnessOfFit()}
 	 * </p>
-	 * @return  the directionality histograms; is null if the method {@link #computeHistograms()} 
-	 * was not called before.
+	 * 
+	 * @return the directionality histograms; is null if the method
+	 *         {@link #computeHistograms()} was not called before.
 	 */
-	public ArrayList<double[]> getHistograms() {
+	public ArrayList< double[] > getHistograms()
+	{
 		return histograms;
 	}
-	
+
 	/**
-	 * Return the center of the bins for the directionality histograms. They are in degrees.
+	 * Return the center of the bins for the directionality histograms. They are
+	 * in degrees.
 	 * <p>
-	 * See {@link #getHistograms()}, {@link #getFitParameters()}, {@link #getGoodnessOfFit()}
+	 * See {@link #getHistograms()}, {@link #getFitParameters()},
+	 * {@link #getGoodnessOfFit()}
 	 * </p>
-	 * @return  the bin centers, in degrees
+	 * 
+	 * @return the bin centers, in degrees
 	 */
-	public double[] getBins() {
-		final double[] degree_bins = new double[nbins];
-		for (int i = 0; i < degree_bins.length; i++) {
-			degree_bins[i] = bin_start + 180 *  i * (bins[i]+Math.PI/2)/Math.PI ;
+	public double[] getBins()
+	{
+		final double[] degree_bins = new double[ nbins ];
+		for ( int i = 0; i < degree_bins.length; i++ )
+		{
+			degree_bins[ i ] = bin_start + 180 * i * ( bins[ i ] + Math.PI / 2 ) / Math.PI;
 		}
 		return degree_bins;
 	}
-	
+
 	/**
-	 * Set the desired number of bins. This resets the {@link #histograms} field to null.
+	 * Set the desired number of bins. This resets the {@link #histograms} field
+	 * to null.
 	 */
-	public void setBinNumber(int nbins) {
+	public void setBinNumber( final int nbins )
+	{
 		this.nbins = nbins;
-		prepareBins(nbins);
+		prepareBins( nbins );
 		histograms = null;
 	}
-	
+
 	/**
 	 * Return the current number of bins for this instance.
+	 * 
 	 * @return
 	 */
-	public int getBinNumber() {
+	public int getBinNumber()
+	{
 		return nbins;
 	}
-	
+
 	/**
-	 * Set the desired start for the angle bins, in degrees. This resets the {@link #histograms} field to null.
+	 * Set the desired start for the angle bins, in degrees. This resets the
+	 * {@link #histograms} field to null.
 	 */
-	public void setBinStart(double bin_start) {
+	public void setBinStart( final double bin_start )
+	{
 		this.bin_start = bin_start;
 		histograms = null;
 	}
-	
+
 	/**
 	 * Return the current value for angle bin start, in degrees.
 	 */
-	public double getBinStart() {
+	public double getBinStart()
+	{
 		return bin_start;
 	}
-	
+
 	/**
-	 * Set the desired method for analysis. This resets the {@link #histograms} field to null.
+	 * Set the desired method for analysis. This resets the {@link #histograms}
+	 * field to null.
 	 * <p>
 	 * See {@link AnalysisMethod}
 	 * </p>
 	 */
-	public void setMethod(AnalysisMethod method) {
+	public void setMethod( final AnalysisMethod method )
+	{
 		this.method = method;
 		histograms = null;
 	}
-	
+
 	/**
 	 * Return the analysis method used by this instance.
+	 * 
 	 * @return
 	 */
-	public AnalysisMethod getMethod() {
+	public AnalysisMethod getMethod()
+	{
 		return method;
 	}
-	
+
 	/**
 	 * Set the debug flag.
 	 */
-	public void setDebugFlag(boolean flag) {
+	public void setDebugFlag( final boolean flag )
+	{
 		this.debug = flag;
 	}
-	
+
 	/**
 	 * Set the build orientation map flag
 	 */
-	public void setBuildOrientationMapFlag(boolean flag) {
+	public void setBuildOrientationMapFlag( final boolean flag )
+	{
 		this.build_orientation_map = flag;
 	}
 
 	/**
-	 * Return the orientation map as an {@link ImageStack}, one slice per slice in the source image.
-	 * Return null if the orientation map flag was not set, or if computation was not done.  
+	 * Return the orientation map as an {@link ImageStack}, one slice per slice
+	 * in the source image. Return null if the orientation map flag was not set,
+	 * or if computation was not done.
 	 */
-	public ImageStack getOrientationMap() {
+	public ImageStack getOrientationMap()
+	{
 		return orientation_map;
 	}
-	
-	
-	
-	
-	
-	
+
 	/*
 	 * PRIVATE METHODS
 	 */
-	
-	
-	
-	
-	
-	
+
 	/**
-	 * Display the dialog when the plugin is launched from ImageJ. A successful interaction will
-	 * result in setting the {@link #nbins}, {@link #bin_start}, {@link #display_table} 
-	 * and {@link #debug} fields.
-	 * @return  true is the user has pressed the 'Cancel' button.
+	 * Display the dialog when the plugin is launched from ImageJ. A successful
+	 * interaction will result in setting the {@link #nbins},
+	 * {@link #bin_start}, {@link #display_table} and {@link #debug} fields.
+	 * 
+	 * @return true is the user has pressed the 'Cancel' button.
 	 */
-	private boolean showDialog() {
+	private boolean showDialog()
+	{
 
 		// Prepare dialog
-		String current = imp.getTitle();
-		String[] method_names = new String[AnalysisMethod.values().length];
-		for (int i = 0; i < method_names.length; i++) {
-			method_names[i] = AnalysisMethod.values()[i].toString();
+		final String current = imp.getTitle();
+		final String[] method_names = new String[ AnalysisMethod.values().length ];
+		for ( int i = 0; i < method_names.length; i++ )
+		{
+			method_names[ i ] = AnalysisMethod.values()[ i ].toString();
 		}
 
 		// Layout dialog
-		GenericDialog gd = new GenericDialog(PLUGIN_NAME + " v" + VERSION_STR);
-		gd.addMessage(current);
-		gd.addChoice("Method:", method_names, setting_method.toString());
-		gd.addNumericField("Nbins: ", setting_nbins, 0);
-		gd.addNumericField("Histogram start", setting_bin_start , 0, 4, "°");
-		gd.addCheckbox("Build orientation map", setting_build_orientation_map);
-		gd.addCheckbox("Display_color_wheel", setting_display_color_wheel);
-		gd.addCheckbox("Display_table", setting_display_table);
-		gd.addCheckbox("Debug", setting_debug);
+		final GenericDialog gd = new GenericDialog( PLUGIN_NAME + " v" + VERSION_STR );
+		gd.addMessage( current );
+		gd.addChoice( "Method:", method_names, setting_method.toString() );
+		gd.addNumericField( "Nbins: ", setting_nbins, 0 );
+		gd.addNumericField( "Histogram start", setting_bin_start, 0, 4, "°" );
+		gd.addCheckbox( "Build orientation map", setting_build_orientation_map );
+		gd.addCheckbox( "Display_color_wheel", setting_display_color_wheel );
+		gd.addCheckbox( "Display_table", setting_display_table );
+		gd.addCheckbox( "Debug", setting_debug );
 		gd.showDialog();
 
 		// Collect dialog settings
-		if (gd.wasCanceled())
+		if ( gd.wasCanceled() )
 			return true;
-		String chosen_method = gd.getNextChoice();
-		for (int i = 0; i < method_names.length; i++) {
-			if (chosen_method.equals(method_names[i])) {
-				method = AnalysisMethod.values()[i];
+		final String chosen_method = gd.getNextChoice();
+		for ( int i = 0; i < method_names.length; i++ )
+		{
+			if ( chosen_method.equals( method_names[ i ] ) )
+			{
+				method = AnalysisMethod.values()[ i ];
 				break;
 			}
-		} 
+		}
 		setting_method = method;
-		
+
 		// Reflect user settings in fields
-		nbins = (int) gd.getNextNumber();
+		nbins = ( int ) gd.getNextNumber();
 		bin_start = gd.getNextNumber();
 		build_orientation_map = gd.getNextBoolean();
 		display_color_wheel = gd.getNextBoolean();
 		display_table = gd.getNextBoolean();
 		debug = gd.getNextBoolean();
-		
+
 		// Store last user selected settings in default
 		setting_nbins = nbins;
 		setting_bin_start = bin_start;
@@ -1106,221 +1264,266 @@ public class Directionality_ implements PlugIn {
 		setting_debug = debug;
 		return false;
 	}
-	
+
 	/**
-	 * This method is used to initialize variables required for the Fourier analysis
-	 * after parameters have been set by the user.
+	 * This method is used to initialize variables required for the Fourier
+	 * analysis after parameters have been set by the user.
 	 */
-	private void initFourierFields() {
-		if (null == imp)
+	private void initFourierFields()
+	{
+		if ( null == imp )
 			return;
-		
+
 		// Compute dimensions
 		width = imp.getWidth();
 		height = imp.getHeight();
-		if ( width == height) {
+		if ( width == height )
+		{
 			npadx = 1;
 			npady = 1;
 			long_side = width;
 			small_side = width;
 			step = 0;
-		} else {
-			small_side = Math.min(width, height);
-			long_side  = Math.max(width, height);
-			int npad = long_side / small_side + 1;
-			if (width == long_side) {
+		}
+		else
+		{
+			small_side = Math.min( width, height );
+			long_side = Math.max( width, height );
+			final int npad = long_side / small_side + 1;
+			if ( width == long_side )
+			{
 				npadx = npad;
 				npady = 1;
-			} else {
+			}
+			else
+			{
 				npadx = 1;
 				npady = npad;
 			}
-			int delta = (long_side - small_side);
-			step = delta / (npad-1);
+			final int delta = ( long_side - small_side );
+			step = delta / ( npad - 1 );
 		}
-		
+
 		// Computes power of 2 image dimension
 		pad_size = 2;
-        while(pad_size<small_side) pad_size *= 2;
-		padded_square_block = new FloatProcessor(pad_size, pad_size);
-		
+		while ( pad_size < small_side )
+			pad_size *= 2;
+		padded_square_block = new FloatProcessor( pad_size, pad_size );
+
 		// Prepare windowing
-		window = getBlackmanProcessor(small_side, small_side);
-		window_pixels = (float[]) window.getPixels();
-		
+		window = getBlackmanProcessor( small_side, small_side );
+		window_pixels = ( float[] ) window.getPixels();
+
 		// Prepare polar coordinates
-		r = makeRMatrix(pad_size, pad_size);
-		theta = makeThetaMatrix(pad_size, pad_size);
-		
+		r = makeRMatrix( pad_size, pad_size );
+		theta = makeThetaMatrix( pad_size, pad_size );
+
 		// Prepare filters
 		filters = makeFftFilters();
-		
-		if (debug) {
-			new ImagePlus("Angular filters", filters).show();
+
+		if ( debug )
+		{
+			new ImagePlus( "Angular filters", filters ).show();
 		}
 	}
-	
+
 	/**
 	 * This method implements the local gradient orientation analysis method.
 	 * <p>
-	 * The gradient is calculated using a 5x5 Sobel filter. The gradient orientation
-	 * from -pi/2 to pi/2 is calculated and put in the histogram. The histogram
-	 * get the square of the norm as value, so that only strong gradient contribute to it.
-	 * We use the square of the norm, so that the histogram calculated with this method
-	 * has the same dimension that with the Fourier method.
+	 * The gradient is calculated using a 5x5 Sobel filter. The gradient
+	 * orientation from -pi/2 to pi/2 is calculated and put in the histogram.
+	 * The histogram get the square of the norm as value, so that only strong
+	 * gradient contribute to it. We use the square of the norm, so that the
+	 * histogram calculated with this method has the same dimension that with
+	 * the Fourier method.
 	 * 
 	 * @see #fourier_component(FloatProcessor)
-	 *  
+	 * 
 	 */
-	private final double[] local_gradient_orientation(final FloatProcessor ip) {
+	private final double[] local_gradient_orientation( final FloatProcessor ip )
+	{
 //		double[] dir = new double[nbins]; // histo with #bins
-		final double[] norm_dir = new double[nbins]; // histo from -pi to pi;
-		final FloatProcessor grad_x = (FloatProcessor) ip.duplicate();
-		final FloatProcessor grad_y = (FloatProcessor) ip.duplicate();
+		final double[] norm_dir = new double[ nbins ]; // histo from -pi to pi;
+		final FloatProcessor grad_x = ( FloatProcessor ) ip.duplicate();
+		final FloatProcessor grad_y = ( FloatProcessor ) ip.duplicate();
 		final Convolver convolver = new Convolver();
-		final float[] kernel_y = new float[] { 
-				-2f,  	-1f, 	0f, 	1f, 	2f,
-				-3f,  	-2f,  	0f, 	2f, 	3f,
-				-4f, 	-3f, 	0f, 	3f, 	4f,
-				-3f,  	-2f,  	0f, 	2f, 	3f,
-				-2f,  	-1f,  	0f, 	1f, 	2f		} ; // That's gx, but we want to have a 90º shift, to comply to the rest of the plugin
+		final float[] kernel_y = new float[] {
+				-2f, -1f, 0f, 1f, 2f,
+				-3f, -2f, 0f, 2f, 3f,
+				-4f, -3f, 0f, 3f, 4f,
+				-3f, -2f, 0f, 2f, 3f,
+				-2f, -1f, 0f, 1f, 2f }; // That's gx, but we want to have a 90º
+										// shift, to comply to the rest of the
+										// plugin
 		final float[] kernel_x = new float[] {
-				2f, 	3f, 	4f, 	3f, 	2f,
-				1f, 	2f, 	3f, 	2f, 	1f,
-				0, 		0, 		0, 		0, 		0,
-				-1f, 	-2f, 	-3f, 	-2f, 	-1f,
-				-2f, 	-3f, 	-4f, 	-3f, 	-2f		};
+				2f, 3f, 4f, 3f, 2f,
+				1f, 2f, 3f, 2f, 1f,
+				0, 0, 0, 0, 0,
+				-1f, -2f, -3f, -2f, -1f,
+				-2f, -3f, -4f, -3f, -2f };
 
-		convolver.convolveFloat(grad_x, kernel_x, 5, 5);
-		convolver.convolveFloat(grad_y, kernel_y, 5, 5);
-		
-		final float[] pixels_gx = (float[]) grad_x.getPixels();
-		final float[] pixels_gy = (float[]) grad_y.getPixels();
-		final float[] pixels_theta = new float[pixels_gx.length];
-		final float[] pixels_r = new float[pixels_gx.length];
-		
+		convolver.convolveFloat( grad_x, kernel_x, 5, 5 );
+		convolver.convolveFloat( grad_y, kernel_y, 5, 5 );
+
+		final float[] pixels_gx = ( float[] ) grad_x.getPixels();
+		final float[] pixels_gy = ( float[] ) grad_y.getPixels();
+		final float[] pixels_theta = new float[ pixels_gx.length ];
+		final float[] pixels_r = new float[ pixels_gx.length ];
+
 		double norm, max_norm = 0.0;
 		double angle;
 		int histo_index;
 		float dx, dy;
-		for (int i = 0; i < pixels_gx.length; i++) {
-			dx = pixels_gx[i];
-			dy =  - pixels_gy[i]; // upright orientation
-			norm = dx*dx+dy*dy; // We keep the square so as to have the same dimension that Fourier components analysis
-			if (norm > max_norm) { 
+		for ( int i = 0; i < pixels_gx.length; i++ )
+		{
+			dx = pixels_gx[ i ];
+			dy = -pixels_gy[ i ]; // upright orientation
+			norm = dx * dx + dy * dy; // We keep the square so as to have the
+										// same dimension that Fourier
+										// components analysis
+			if ( norm > max_norm )
+			{
 				max_norm = norm;
 			}
-			angle = Math.atan(dy/dx);
-			pixels_theta[i] = (float) (angle * 180.0 / Math.PI); // deg, -90º to 90º
-			pixels_r[i] = (float) norm;
-			histo_index = (int) ((nbins/2.0) * (1 + angle / (Math.PI/2)) ); // where to put it
-			if (histo_index == nbins) {
-				histo_index = 0; // circular shift in case of exact vertical orientation
+			angle = Math.atan( dy / dx );
+			pixels_theta[ i ] = ( float ) ( angle * 180.0 / Math.PI ); // deg,
+																		// -90º
+																		// to
+																		// 90º
+			pixels_r[ i ] = ( float ) norm;
+			histo_index = ( int ) ( ( nbins / 2.0 ) * ( 1 + angle / ( Math.PI / 2 ) ) ); // where
+																							// to
+																							// put
+																							// it
+			if ( histo_index == nbins )
+			{
+				histo_index = 0; // circular shift in case of exact vertical
+									// orientation
 			}
-			norm_dir[histo_index] += norm; // we put the norm, the stronger the better
+			norm_dir[ histo_index ] += norm; // we put the norm, the stronger
+												// the better
 		}
-		
-		if (build_orientation_map) {
-			final float[] pixels = (float[]) ip.getPixels();
+
+		if ( build_orientation_map )
+		{
+			final float[] pixels = ( float[] ) ip.getPixels();
 			float max_brightness = Float.NEGATIVE_INFINITY;
 			float min_brightness = Float.POSITIVE_INFINITY;
-			
-			for (int i = 0; i < pixels.length; i++) {
-				if (pixels[i] > max_brightness){
-					max_brightness = pixels[i];
+
+			for ( int i = 0; i < pixels.length; i++ )
+			{
+				if ( pixels[ i ] > max_brightness )
+				{
+					max_brightness = pixels[ i ];
 				}
-				if (pixels[i] < min_brightness) {
-					min_brightness = pixels[i];
+				if ( pixels[ i ] < min_brightness )
+				{
+					min_brightness = pixels[ i ];
 				}
 			}
-			final ColorProcessor cp = new ColorProcessor(ip.getWidth(), ip.getHeight());
-			final byte[] H = new byte[pixels_r.length];
-			final byte[] S = new byte[pixels_r.length];
-			for (int i = 0; i < pixels_r.length; i++) {
-				H[i] = (byte) (255.0 * (pixels_theta[i]+90.0)/180.0);
-				S[i] = (byte) (255.0 * pixels_r[i] / max_norm) ; //Math.log10(1.0 + 9.0*pixels_r[i] / max_norm) );
+			final ColorProcessor cp = new ColorProcessor( ip.getWidth(), ip.getHeight() );
+			final byte[] H = new byte[ pixels_r.length ];
+			final byte[] S = new byte[ pixels_r.length ];
+			for ( int i = 0; i < pixels_r.length; i++ )
+			{
+				H[ i ] = ( byte ) ( 255.0 * ( pixels_theta[ i ] + 90.0 ) / 180.0 );
+				S[ i ] = ( byte ) ( 255.0 * pixels_r[ i ] / max_norm ); // Math.log10(1.0
+																		// +
+																		// 9.0*pixels_r[i]
+																		// /
+																		// max_norm)
+																		// );
 			}
-			final byte[] B = (byte[]) ip.convertToByte(true).getPixels();
-			cp.setHSB(H, S, B);
-			orientation_map.addSlice(makeNames()[slice_index], cp);
+			final byte[] B = ( byte[] ) ip.convertToByte( true ).getPixels();
+			cp.setHSB( H, S, B );
+			orientation_map.addSlice( makeNames()[ slice_index ], cp );
 		}
-		
+
 		return norm_dir;
 	}
 
 	/**
-	 * This method implements the Fourier component analysis method. The method {@link #initFourierFields()}
-	 * must be called before this method is.
+	 * This method implements the Fourier component analysis method. The method
+	 * {@link #initFourierFields()} must be called before this method is.
 	 * <p>
-	 * Images are chopped in squares, and the Fourier spectrum of each square is calculated.
-	 * For the spectrum, we get the angular component using the filters generated by {@link #makeFftFilters()}.
+	 * Images are chopped in squares, and the Fourier spectrum of each square is
+	 * calculated. For the spectrum, we get the angular component using the
+	 * filters generated by {@link #makeFftFilters()}.
 	 * </p>
 	 * <p>
-	 * We return the results as a double array, containing the amount of orientation for each angles
-	 * specified in the {@link #bins} field.
+	 * We return the results as a double array, containing the amount of
+	 * orientation for each angles specified in the {@link #bins} field.
 	 * </p>
 	 * <p>
 	 * See {@link #local_gradient_orientation(FloatProcessor)}
 	 * </p>
 	 */
-	private final double[] fourier_component(FloatProcessor ip) {
-		final Roi original_square = new Roi((pad_size-small_side)/2, (pad_size-small_side)/2, small_side, small_side); 
-				
+	private final double[] fourier_component( final FloatProcessor ip )
+	{
+		final Roi original_square = new Roi( ( pad_size - small_side ) / 2, ( pad_size - small_side ) / 2, small_side, small_side );
+
 		float[] fpx, spectrum_px;
-		final double[] dir = new double[nbins];
+		final double[] dir = new double[ nbins ];
 		ImageProcessor square_block;
 		Roi square_roi;
-		FHT fft, pspectrum;		
+		FHT fft, pspectrum;
 		FloatProcessor small_pspectrum;
-		
+
 		ImageStack spectra = null;
-		if (debug) {
-			spectra = new ImageStack(small_side, small_side);			
+		if ( debug )
+		{
+			spectra = new ImageStack( small_side, small_side );
 		}
-		
+
 		FloatProcessor[] hue_arrays = null, saturation_arrays = null;
-		if (build_orientation_map) {
-			hue_arrays = new FloatProcessor[npadx*npady];
-			saturation_arrays = new FloatProcessor[npadx*npady];
+		if ( build_orientation_map )
+		{
+			hue_arrays = new FloatProcessor[ npadx * npady ];
+			saturation_arrays = new FloatProcessor[ npadx * npady ];
 		}
-				
+
 		// Overall maximum of the weights
-		float max_norm =0.0f;
-		// If the image is not square, split it in small square padding all the image
-		for (int ix = 0; ix<npadx; ix++) {
-			
-			for (int iy = 0; iy<npady; iy++) {
-				
+		float max_norm = 0.0f;
+		// If the image is not square, split it in small square padding all the
+		// image
+		for ( int ix = 0; ix < npadx; ix++ )
+		{
+
+			for ( int iy = 0; iy < npady; iy++ )
+			{
+
 				// Extract a square block from the image
-				square_roi = new Roi( ix*step, iy*step, small_side, small_side );
-				ip.setRoi(square_roi);
+				square_roi = new Roi( ix * step, iy * step, small_side, small_side );
+				ip.setRoi( square_roi );
 				square_block = ip.crop();
-				
+
 				// Window the block
-				float[] block_pixels = (float[]) square_block.getPixels();
-				for (int i = 0; i < block_pixels.length; i++) {
-					block_pixels[i] *= window_pixels[i]; 
+				final float[] block_pixels = ( float[] ) square_block.getPixels();
+				for ( int i = 0; i < block_pixels.length; i++ )
+				{
+					block_pixels[ i ] *= window_pixels[ i ];
 				}
-				
+
 				// Pad the block with a power of 2 size
-				padded_square_block.setValue(0.0);
+				padded_square_block.setValue( 0.0 );
 				padded_square_block.fill();
-				padded_square_block.insert(square_block, (pad_size-small_side)/2, (pad_size-small_side)/2);
-				
+				padded_square_block.insert( square_block, ( pad_size - small_side ) / 2, ( pad_size - small_side ) / 2 );
+
 				// Computes its FFT
-				fft = new FHT(padded_square_block);
-				fft.setShowProgress(false);
+				fft = new FHT( padded_square_block );
+				fft.setShowProgress( false );
 				fft.transform();
 				fft.swapQuadrants();
-				
+
 				// Get a centered power spectrum with right size
-				pspectrum = fft.conjugateMultiply(fft);
-				pspectrum .setRoi(original_square);
-				small_pspectrum = (FloatProcessor) pspectrum.crop();
-				spectrum_px = (float[]) pspectrum.getPixels(); //small_pspectrum.getPixels(); 
-				
-				if (debug) {
-					spectra.addSlice("block nbr "+(ix+1)*(iy+1), displayLog(small_pspectrum));
+				pspectrum = fft.conjugateMultiply( fft );
+				pspectrum.setRoi( original_square );
+				small_pspectrum = ( FloatProcessor ) pspectrum.crop();
+				spectrum_px = ( float[] ) pspectrum.getPixels(); // small_pspectrum.getPixels();
+
+				if ( debug )
+				{
+					spectra.addSlice( "block nbr " + ( ix + 1 ) * ( iy + 1 ), displayLog( small_pspectrum ) );
 				}
 
 				// For orientation map
@@ -1328,508 +1531,620 @@ public class Directionality_ implements PlugIn {
 				FHT tmp;
 				FloatProcessor small_tmp;
 				float[] tmp_px, small_tmp_px;
-				
 
-				if (build_orientation_map) {
-					weights 	= new float[small_side * small_side];
-					max_weights = new float[small_side * small_side];
-					best_angle 	= new float[small_side * small_side];
+				if ( build_orientation_map )
+				{
+					weights = new float[ small_side * small_side ];
+					max_weights = new float[ small_side * small_side ];
+					best_angle = new float[ small_side * small_side ];
 				}
 
 				// Loop over all bins
-				for (int bin=0; bin<nbins; bin++) {
-					
+				for ( int bin = 0; bin < nbins; bin++ )
+				{
+
 					// Get filter pixels
-					fpx = (float[]) filters.getPixels(bin+1);
-					
+					fpx = ( float[] ) filters.getPixels( bin + 1 );
+
 					// Loop over all pixels
-					if (build_orientation_map) {
-						
+					if ( build_orientation_map )
+					{
+
 						tmp = fft.getCopy();
-						tmp.setShowProgress(false);
-						tmp_px = (float[]) tmp.getPixels();
-						for (int i = 0; i < spectrum_px.length; i++) {
+						tmp.setShowProgress( false );
+						tmp_px = ( float[] ) tmp.getPixels();
+						for ( int i = 0; i < spectrum_px.length; i++ )
+						{
 							// Computes angular density
-							dir[bin] += spectrum_px[i] * fpx[i]; // will sum out with every block
+							dir[ bin ] += spectrum_px[ i ] * fpx[ i ]; // will
+																		// sum
+																		// out
+																		// with
+																		// every
+																		// block
 							// Build orientation map if needed
-							tmp_px[i] *= fpx[i];							
+							tmp_px[ i ] *= fpx[ i ];
 						}
 						tmp.inverseTransform();
-						tmp.setRoi(original_square);
-						small_tmp = (FloatProcessor) tmp.crop();
-						
+						tmp.setRoi( original_square );
+						small_tmp = ( FloatProcessor ) tmp.crop();
+
 						// Build angular statistics arrays -> 2nd loop
-						small_tmp_px = (float[]) small_tmp.getPixels();
-						for (int j = 0; j < small_tmp_px.length; j++) {
-							weights[j] = small_tmp_px[j] * small_tmp_px[j];
-							if (weights[j] > max_weights[j]) {
-								max_weights[j] = weights[j];
-								best_angle[j] = (float) bins[bin]; // rad, [-pi/2 - pi/2[
+						small_tmp_px = ( float[] ) small_tmp.getPixels();
+						for ( int j = 0; j < small_tmp_px.length; j++ )
+						{
+							weights[ j ] = small_tmp_px[ j ] * small_tmp_px[ j ];
+							if ( weights[ j ] > max_weights[ j ] )
+							{
+								max_weights[ j ] = weights[ j ];
+								best_angle[ j ] = ( float ) bins[ bin ]; // rad,
+																			// [-pi/2
+																			// -
+																			// pi/2[
 							}
 							// Overall maximum calculation
-							if (weights[j] > max_norm) {
-								max_norm = weights[j]; 
+							if ( weights[ j ] > max_norm )
+							{
+								max_norm = weights[ j ];
 							}
 						}
-						
-					} else {
-						
-						for (int i = 0; i < spectrum_px.length; i++) {
+
+					}
+					else
+					{
+
+						for ( int i = 0; i < spectrum_px.length; i++ )
+						{
 							// Computes angular density, and that's all
-							dir[bin] += spectrum_px[i] * fpx[i]; // will sum out with every block
-						}							
+							dir[ bin ] += spectrum_px[ i ] * fpx[ i ]; // will
+																		// sum
+																		// out
+																		// with
+																		// every
+																		// block
+						}
 					}
 
 				} // end loop over all bins
 
 				// Store results
-				if (build_orientation_map) {
-					hue_arrays[ix+npadx*iy] = new FloatProcessor(ip.getWidth(), ip.getHeight());
-					hue_arrays[ix+npadx*iy].insert(new FloatProcessor(small_side, small_side, best_angle, null), ix*step, iy*step);
-					saturation_arrays[ix+npadx*iy] = new FloatProcessor(ip.getWidth(), ip.getHeight());
-					saturation_arrays[ix+npadx*iy].insert(new FloatProcessor(small_side, small_side, max_weights, null), ix*step, iy*step);
+				if ( build_orientation_map )
+				{
+					hue_arrays[ ix + npadx * iy ] = new FloatProcessor( ip.getWidth(), ip.getHeight() );
+					hue_arrays[ ix + npadx * iy ].insert( new FloatProcessor( small_side, small_side, best_angle, null ), ix * step, iy * step );
+					saturation_arrays[ ix + npadx * iy ] = new FloatProcessor( ip.getWidth(), ip.getHeight() );
+					saturation_arrays[ ix + npadx * iy ].insert( new FloatProcessor( small_side, small_side, max_weights, null ), ix * step, iy * step );
 				}
 			}
 		}
-		
+
 		// Reconstruct final orientation map
-		if (build_orientation_map) {
-			FloatProcessor big_hue = new FloatProcessor(ip.getWidth(), ip.getHeight());
-			FloatProcessor big_saturation = new FloatProcessor(ip.getWidth(), ip.getHeight());
-			float[] big_hue_px = (float[]) big_hue.getPixels();
-			float[] big_saturation_px = (float[]) big_saturation.getPixels();
+		if ( build_orientation_map )
+		{
+			final FloatProcessor big_hue = new FloatProcessor( ip.getWidth(), ip.getHeight() );
+			final FloatProcessor big_saturation = new FloatProcessor( ip.getWidth(), ip.getHeight() );
+			final float[] big_hue_px = ( float[] ) big_hue.getPixels();
+			final float[] big_saturation_px = ( float[] ) big_saturation.getPixels();
 			float[] saturation_px = null, hue_px = null;
-			for (int ix = 0; ix<npadx; ix++) {
-				for (int iy = 0; iy<npady; iy++) {
-					hue_px = (float[]) hue_arrays[ix+npadx*iy].getPixels();
-					saturation_px = (float[]) saturation_arrays[ix+npadx*iy].getPixels();
-					for (int i = 0; i < big_hue_px.length; i++) {
-						if ((255*saturation_px[i]/max_norm) >= big_saturation_px[i]) {
-							big_saturation_px[i] = (255*saturation_px[i]/max_norm);
+			for ( int ix = 0; ix < npadx; ix++ )
+			{
+				for ( int iy = 0; iy < npady; iy++ )
+				{
+					hue_px = ( float[] ) hue_arrays[ ix + npadx * iy ].getPixels();
+					saturation_px = ( float[] ) saturation_arrays[ ix + npadx * iy ].getPixels();
+					for ( int i = 0; i < big_hue_px.length; i++ )
+					{
+						if ( ( 255 * saturation_px[ i ] / max_norm ) >= big_saturation_px[ i ] )
+						{
+							big_saturation_px[ i ] = ( 255 * saturation_px[ i ] / max_norm );
 //							big_hue_px[i] = (float) ( 255 *  ( ( 1 + hue_px[i]/Math.PI ) % 1 ) ); 
-							big_hue_px[i] = (float) ( 255 *  ( ( 0.5 + hue_px[i]/Math.PI )  ) ); 
+							big_hue_px[ i ] = ( float ) ( 255 * ( ( 0.5 + hue_px[ i ] / Math.PI ) ) );
 						}
 					}
 				}
 			}
 
-			ByteProcessor big_brightness = (ByteProcessor) ip.convertToByte(true);
-			ColorProcessor cp = new ColorProcessor(ip.getWidth(), ip.getHeight());
+			final ByteProcessor big_brightness = ( ByteProcessor ) ip.convertToByte( true );
+			final ColorProcessor cp = new ColorProcessor( ip.getWidth(), ip.getHeight() );
 			cp.setHSB(
-						(byte[]) big_hue.convertToByte(false).getPixels(), 
-						(byte[]) big_saturation.convertToByte(false).getPixels(), 
-						(byte[]) big_brightness.getPixels()
-					); 
-			orientation_map.addSlice(makeNames()[slice_index], cp);
+					( byte[] ) big_hue.convertToByte( false ).getPixels(),
+					( byte[] ) big_saturation.convertToByte( false ).getPixels(),
+					( byte[] ) big_brightness.getPixels() );
+			orientation_map.addSlice( makeNames()[ slice_index ], cp );
 		}
 
-		if (debug) {
-			new ImagePlus("Log10 power FFT of "+makeNames()[slice_index], spectra).show();
+		if ( debug )
+		{
+			new ImagePlus( "Log10 power FFT of " + makeNames()[ slice_index ], spectra ).show();
 		}
-		
-		return dir;		
+
+		return dir;
 	}
-	
+
 	/**
-	 * This method generates the angular filters used by the Fourier analysis. It reads the fields {@link #nbins},
-	 * {@link #bin_start} to determine how many individual angle filter to generate, and {@link #pad_size}
-	 * to determine the image filter size. As such, they must be set before calling this method.
+	 * This method generates the angular filters used by the Fourier analysis.
+	 * It reads the fields {@link #nbins}, {@link #bin_start} to determine how
+	 * many individual angle filter to generate, and {@link #pad_size} to
+	 * determine the image filter size. As such, they must be set before calling
+	 * this method.
 	 *
 	 * <p>
 	 * See {@link #fourier_component(FloatProcessor)}, {@link #prepareBins(int)}
 	 * </p>
-	 * @return  an {@link ImageStack} made of each individual angular filter
+	 * 
+	 * @return an {@link ImageStack} made of each individual angular filter
 	 */
-	private final ImageStack makeFftFilters() {
-		final ImageStack filters = new ImageStack(pad_size, pad_size, nbins);
+	private final ImageStack makeFftFilters()
+	{
+		final ImageStack filters = new ImageStack( pad_size, pad_size, nbins );
 		float[] pixels;
-		
-		final float[] r_px = (float[]) r.getPixels();
-		final float[] theta_px = (float[]) theta.getPixels();
-		
-		double current_r, current_theta, theta_c, angular_part, radial_part;
-		final double theta_bw = Math.PI/(nbins-1);
-		final double r_c = pad_size / 4;
-		final double r_bw = r_c/2;
-				
-		for (int i=1; i<= nbins; i++) {
-			
-			pixels = new float[pad_size*pad_size];
-			theta_c = bins[i-1]+Math.PI/2;
-			
-			for (int index = 0; index < pixels.length; index++) {
 
-				current_r = r_px[index];
-				if ( current_r < FREQ_THRESHOLD || current_r > pad_size/2) {
+		final float[] r_px = ( float[] ) r.getPixels();
+		final float[] theta_px = ( float[] ) theta.getPixels();
+
+		double current_r, current_theta, theta_c, angular_part, radial_part;
+		final double theta_bw = Math.PI / ( nbins - 1 );
+		final double r_c = pad_size / 4;
+		final double r_bw = r_c / 2;
+
+		for ( int i = 1; i <= nbins; i++ )
+		{
+
+			pixels = new float[ pad_size * pad_size ];
+			theta_c = bins[ i - 1 ] + Math.PI / 2;
+
+			for ( int index = 0; index < pixels.length; index++ )
+			{
+
+				current_r = r_px[ index ];
+				if ( current_r < FREQ_THRESHOLD || current_r > pad_size / 2 )
+				{
 					continue;
 				}
-				radial_part = Math.exp( -(current_r-r_c)*(current_r-r_c)/(r_bw*r_bw));
-				
-				current_theta = theta_px[index];
-				if ( Math.abs(current_theta-theta_c) < theta_bw) {
-					angular_part = Math.cos( (current_theta-theta_c) / theta_bw * Math.PI / 2.0) ;
+				radial_part = Math.exp( -( current_r - r_c ) * ( current_r - r_c ) / ( r_bw * r_bw ) );
+
+				current_theta = theta_px[ index ];
+				if ( Math.abs( current_theta - theta_c ) < theta_bw )
+				{
+					angular_part = Math.cos( ( current_theta - theta_c ) / theta_bw * Math.PI / 2.0 );
 					angular_part = angular_part * angular_part;
-					
-				} else if ( 
-						Math.abs(current_theta-(theta_c-Math.PI)) < theta_bw
-						|| Math.abs(current_theta-2*Math.PI-(theta_c-Math.PI)) < theta_bw
-						) {
-					angular_part = Math.cos( (current_theta-theta_c) / theta_bw * Math.PI / 2.0) ;
-					if (nbins % 2 == 0) {
+
+				}
+				else if ( Math.abs( current_theta - ( theta_c - Math.PI ) ) < theta_bw
+						|| Math.abs( current_theta - 2 * Math.PI - ( theta_c - Math.PI ) ) < theta_bw )
+				{
+					angular_part = Math.cos( ( current_theta - theta_c ) / theta_bw * Math.PI / 2.0 );
+					if ( nbins % 2 == 0 )
+					{
 						angular_part = 1 - angular_part * angular_part;
-					} else {
+					}
+					else
+					{
 						angular_part = angular_part * angular_part;
 					}
-				} else 	{
+				}
+				else
+				{
 					continue; // leave it to 0
 				}
-				
-				pixels[index] = (float)(angular_part * radial_part); 
+
+				pixels[ index ] = ( float ) ( angular_part * radial_part );
 
 			}
-			
-			filters.setPixels(pixels, i);
-			filters.setSliceLabel("Angle: "+String.format("%.1f",theta_c*180/Math.PI), i);
+
+			filters.setPixels( pixels, i );
+			filters.setSliceLabel( "Angle: " + String.format( "%.1f", theta_c * 180 / Math.PI ), i );
 		}
 		return filters;
 	}
-	
+
 	/**
-	 * This method generate a name for each analyzed slice, to display in result tables.
+	 * This method generate a name for each analyzed slice, to display in result
+	 * tables.
 	 * 
-	 * @return  a String array with the names
+	 * @return a String array with the names
 	 */
-	private final String[] makeNames() {
+	private final String[] makeNames()
+	{
 		final int n_slices = imp.getStack().getSize();
 		String[] names;
 		String label;
-		if (imp.getType() == ImagePlus.COLOR_RGB) {
-			names = new String[3*n_slices];
-			for (int i=0; i<n_slices; i++) {
-				label = imp.getStack().getShortSliceLabel(i+1);
-				if (null == label) {				
-					names[0+i*3] = "Slice_"+(i+1)+"R";
-					names[1+i*3] = "Slice_"+(i+1)+"G";
-					names[2+i*3] = "Slice_"+(i+1)+"B";
-				} else {
-					names[0+i*3] = label+"_R";
-					names[1+i*3] = label+"_G";
-					names[2+i*3] = label+"_B";					
+		if ( imp.getType() == ImagePlus.COLOR_RGB )
+		{
+			names = new String[ 3 * n_slices ];
+			for ( int i = 0; i < n_slices; i++ )
+			{
+				label = imp.getStack().getShortSliceLabel( i + 1 );
+				if ( null == label )
+				{
+					names[ 0 + i * 3 ] = "Slice_" + ( i + 1 ) + "R";
+					names[ 1 + i * 3 ] = "Slice_" + ( i + 1 ) + "G";
+					names[ 2 + i * 3 ] = "Slice_" + ( i + 1 ) + "B";
 				}
-			}
-		} else {
-			if (n_slices <= 1) {
-				return new String[] { imp.getShortTitle() };
-			}
-			names = new String[n_slices];
-			for (int i=0; i<n_slices; i++) {
-				label = imp.getStack().getShortSliceLabel(i+1);
-				if (null == label) {
-					names[i] = "Slice_"+(i+1);
-				} else {
-					names[i] = label;
+				else
+				{
+					names[ 0 + i * 3 ] = label + "_R";
+					names[ 1 + i * 3 ] = label + "_G";
+					names[ 2 + i * 3 ] = label + "_B";
 				}
 			}
 		}
-		return names;		
+		else
+		{
+			if ( n_slices <= 1 ) { return new String[] { imp.getShortTitle() }; }
+			names = new String[ n_slices ];
+			for ( int i = 0; i < n_slices; i++ )
+			{
+				label = imp.getStack().getShortSliceLabel( i + 1 );
+				if ( null == label )
+				{
+					names[ i ] = "Slice_" + ( i + 1 );
+				}
+				else
+				{
+					names[ i ] = label;
+				}
+			}
+		}
+		return names;
 	}
-	
-	
-	
-	
-	
-	
-	
+
 	/*
 	 * STATIC METHODS
 	 */
-	
-	
-	public static final ImagePlus generateColorWheel() {
-		final int cw_height= 256;
-		final int cw_width = cw_height/2;
-		final ColorProcessor color_ip = new ColorProcessor(cw_width, cw_height);
-		FloatProcessor R = makeRMatrix(cw_height, cw_height);
-		FloatProcessor T = makeThetaMatrix(cw_height, cw_height);
-		final Roi half_roi = new Roi(cw_height/2, 0, cw_width, cw_height);
-		R.setRoi(half_roi);
-		R = (FloatProcessor) R.crop();
-		T.setRoi(half_roi);
-		T = (FloatProcessor) T.crop();
-		final float[] r = (float[]) R.getPixels();
-		final float[] t = (float[]) T.getPixels();
-		final byte[] hue = new byte[r.length];
-		final byte[] sat = new byte[r.length];
-		final byte[] bgh = new byte[r.length];
-		for (int i = 0; i < t.length; i++) {
-			if (r[i] > cw_height) {
-				hue[i] = (byte) 255;
-				sat[i] = (byte) 255;
-				bgh[i] = 0;
-			} else {
-				hue[i] = (byte) ( 255 * (t[i]+Math.PI/2)/Math.PI);
-				sat[i] = (byte) ( 255 * r[i]/cw_width);
-				bgh[i] = (byte) 255;
+
+	public static final ImagePlus generateColorWheel()
+	{
+		final int cw_height = 256;
+		final int cw_width = cw_height / 2;
+		final ColorProcessor color_ip = new ColorProcessor( cw_width, cw_height );
+		FloatProcessor R = makeRMatrix( cw_height, cw_height );
+		FloatProcessor T = makeThetaMatrix( cw_height, cw_height );
+		final Roi half_roi = new Roi( cw_height / 2, 0, cw_width, cw_height );
+		R.setRoi( half_roi );
+		R = ( FloatProcessor ) R.crop();
+		T.setRoi( half_roi );
+		T = ( FloatProcessor ) T.crop();
+		final float[] r = ( float[] ) R.getPixels();
+		final float[] t = ( float[] ) T.getPixels();
+		final byte[] hue = new byte[ r.length ];
+		final byte[] sat = new byte[ r.length ];
+		final byte[] bgh = new byte[ r.length ];
+		for ( int i = 0; i < t.length; i++ )
+		{
+			if ( r[ i ] > cw_height )
+			{
+				hue[ i ] = ( byte ) 255;
+				sat[ i ] = ( byte ) 255;
+				bgh[ i ] = 0;
+			}
+			else
+			{
+				hue[ i ] = ( byte ) ( 255 * ( t[ i ] + Math.PI / 2 ) / Math.PI );
+				sat[ i ] = ( byte ) ( 255 * r[ i ] / cw_width );
+				bgh[ i ] = ( byte ) 255;
 			}
 		}
-		color_ip.setHSB(hue, sat, bgh);
-		final ImagePlus imp = new ImagePlus("Color wheel", color_ip);
+		color_ip.setHSB( hue, sat, bgh );
+		final ImagePlus imp = new ImagePlus( "Color wheel", color_ip );
 		return imp;
 	}
-	
-	
-	protected static final void addColorMouseListener(final ImageCanvas canvas) {
 
-		MouseMotionListener ml = new MouseMotionListener() {
-			public void mouseDragged(MouseEvent e) {}
-			public void mouseMoved(MouseEvent e) {
-				Point coord = canvas.getCursorLoc();
-				int x = coord.x;
-				int y = coord.y;
-				try {
-					final ColorProcessor cp = (ColorProcessor) canvas.getImage().getProcessor();
-					final int c = cp.getPixel(x, y);
-					final int r = (c&0xff0000) >>16;
-					final int g = (c&0xff00)>>8;
-					final int b = c&0xff;
-					final float[] hsb = Color.RGBtoHSB(r, g, b, null);
-					final float angle = hsb[0] * 180 - 90;
-					final float amount = hsb[1];
-					IJ.showStatus( String.format("Orientation: %5.1f ° - Amont: %5.1f %%", angle, 100*amount));
-				} catch (ClassCastException cce) {
+	protected static final void addColorMouseListener( final ImageCanvas canvas )
+	{
+
+		final MouseMotionListener ml = new MouseMotionListener()
+		{
+			@Override
+			public void mouseDragged( final MouseEvent e )
+			{}
+
+			@Override
+			public void mouseMoved( final MouseEvent e )
+			{
+				final Point coord = canvas.getCursorLoc();
+				final int x = coord.x;
+				final int y = coord.y;
+				try
+				{
+					final ColorProcessor cp = ( ColorProcessor ) canvas.getImage().getProcessor();
+					final int c = cp.getPixel( x, y );
+					final int r = ( c & 0xff0000 ) >> 16;
+					final int g = ( c & 0xff00 ) >> 8;
+					final int b = c & 0xff;
+					final float[] hsb = Color.RGBtoHSB( r, g, b, null );
+					final float angle = hsb[ 0 ] * 180 - 90;
+					final float amount = hsb[ 1 ];
+					IJ.showStatus( String.format( "Orientation: %5.1f ° - Amont: %5.1f %%", angle, 100 * amount ) );
+				}
+				catch ( final ClassCastException cce )
+				{
 					return;
 				}
-			}};
-			canvas.addMouseMotionListener(ml);
+			}
+		};
+		canvas.addMouseMotionListener( ml );
 	}
 
-	
 	/**
 	 * Generate a bin array of angle in degrees, from -pi/2 to pi/2.
+	 * 
 	 * @return a double array of n elements, the angles in radians
-	 * @param n the number of elements to generate
+	 * @param n
+	 *            the number of elements to generate
 	 */
-	protected final static double[] prepareBins(final int n) {
-		final double[] bins = new double[n];
-		for (int i = 0; i < n; i++) {
-			bins[i] = i * Math.PI / n - Math.PI/2;
+	protected final static double[] prepareBins( final int n )
+	{
+		final double[] bins = new double[ n ];
+		for ( int i = 0; i < n; i++ )
+		{
+			bins[ i ] = i * Math.PI / n - Math.PI / 2;
 		}
 		return bins;
 	}
-	
+
 	/**
-	 * Utility method to analyze the content of the argument string passed by ImageJ to 
-	 * this plugin using the {@code setup(String, ImagePlus)} method. Not as clever as it
-	 * could be.
-	 * @param  argument_string  the argument string to parse
-	 * @param  command_str  the command to search for
-	 * @return  a string containing the value after the command string, null if the command string 
-	 * was not found
+	 * Utility method to analyze the content of the argument string passed by
+	 * ImageJ to this plugin using the {@code setup(String, ImagePlus)} method.
+	 * Not as clever as it could be.
+	 * 
+	 * @param argument_string
+	 *            the argument string to parse
+	 * @param command_str
+	 *            the command to search for
+	 * @return a string containing the value after the command string, null if
+	 *         the command string was not found
 	 */
-	protected final static String parseArgumentString(String argument_string, String command_str) {
-		if (argument_string.contains(command_str)) {
-			int narg = argument_string.indexOf(command_str)+command_str.length();
-			int next_arg = argument_string.indexOf(",", narg);
-			if (next_arg == -1) {
+	protected final static String parseArgumentString( final String argument_string, final String command_str )
+	{
+		if ( argument_string.contains( command_str ) )
+		{
+			final int narg = argument_string.indexOf( command_str ) + command_str.length();
+			int next_arg = argument_string.indexOf( ",", narg );
+			if ( next_arg == -1 )
+			{
 				next_arg = argument_string.length();
 			}
-			String str = argument_string.substring(narg, next_arg);
+			final String str = argument_string.substring( narg, next_arg );
 			return str;
 		}
 		return null;
 	}
-	
+
 	/**
-	 * This utility method returns a FloatProcessor with the log10 of each pixel in the
-	 * {@link FloatProcessor} given in argument. Usefull to display power spectrum.
+	 * This utility method returns a FloatProcessor with the log10 of each pixel
+	 * in the {@link FloatProcessor} given in argument. Usefull to display power
+	 * spectrum.
 	 * 
-	 * @param ip  the source FloatProcessor
+	 * @param ip
+	 *            the source FloatProcessor
 	 */
-	protected static final FloatProcessor displayLog(final FloatProcessor ip) {
-		final FloatProcessor log10 = new FloatProcessor(ip.getWidth(), ip.getHeight());
-		final float[] log10_pixels = (float[]) log10.getPixels();
-		final float[] pixels = (float[]) ip.getPixels();
-		for (int i = 0; i < pixels.length; i++) {
-			log10_pixels[i] = (float) Math.log10(1+pixels[i]); 
+	protected static final FloatProcessor displayLog( final FloatProcessor ip )
+	{
+		final FloatProcessor log10 = new FloatProcessor( ip.getWidth(), ip.getHeight() );
+		final float[] log10_pixels = ( float[] ) log10.getPixels();
+		final float[] pixels = ( float[] ) ip.getPixels();
+		for ( int i = 0; i < pixels.length; i++ )
+		{
+			log10_pixels[ i ] = ( float ) Math.log10( 1 + pixels[ i ] );
 		}
 		return log10;
 	}
-	
+
 	/**
 	 * This utility generates a <b>periodic</b> Blackman window over n points.
-	 * @param n  the number of point in the window
-	 * @return  a double array containing the Blackman window
+	 * 
+	 * @param n
+	 *            the number of point in the window
+	 * @return a double array containing the Blackman window
 	 * @see #getBlackmanProcessor(int, int)
 	 */
-	protected static final double[] getBlackmanPeriodicWindow1D(final int n) {
-		final double[] window = new double[n];
-		for (int i = 0; i < window.length; i++) {
-			window[i] = 0.42 - 0.5 * Math.cos(2*Math.PI*i/n) + 0.08 * Math.cos(4*Math.PI/n);
-		}		
+	protected static final double[] getBlackmanPeriodicWindow1D( final int n )
+	{
+		final double[] window = new double[ n ];
+		for ( int i = 0; i < window.length; i++ )
+		{
+			window[ i ] = 0.42 - 0.5 * Math.cos( 2 * Math.PI * i / n ) + 0.08 * Math.cos( 4 * Math.PI / n );
+		}
 		return window;
 	}
 
-	/** 
-	 * Generate a 2D Blackman window used in this plugin before computing FFT, so as to avoid the cross
-	 * artifact at x=0 and y=0.
-	 * @param nx  the width in pixel of the desired window
-	 * @param ny  
-	 * @return  the window, as a FloatProcessor
+	/**
+	 * Generate a 2D Blackman window used in this plugin before computing FFT,
+	 * so as to avoid the cross artifact at x=0 and y=0.
+	 * 
+	 * @param nx
+	 *            the width in pixel of the desired window
+	 * @param ny
+	 * @return the window, as a FloatProcessor
 	 * @see #getBlackmanPeriodicWindow1D(int)
 	 */
-	protected static  final FloatProcessor getBlackmanProcessor(final int nx, final int ny) {
-		final FloatProcessor bpw = new FloatProcessor(nx, ny);
-		final float[] pixels = (float[]) bpw.getPixels();
-		final double[] bpwx = getBlackmanPeriodicWindow1D(nx);
-		final double[] bpwy = getBlackmanPeriodicWindow1D(nx);
-		int ix,iy;
-		for (int i = 0; i < pixels.length; i++) {
+	protected static final FloatProcessor getBlackmanProcessor( final int nx, final int ny )
+	{
+		final FloatProcessor bpw = new FloatProcessor( nx, ny );
+		final float[] pixels = ( float[] ) bpw.getPixels();
+		final double[] bpwx = getBlackmanPeriodicWindow1D( nx );
+		final double[] bpwy = getBlackmanPeriodicWindow1D( nx );
+		int ix, iy;
+		for ( int i = 0; i < pixels.length; i++ )
+		{
 			iy = i / nx;
 			ix = i % nx;
-			pixels[i] = (float) (bpwx[ix] * bpwy[iy]);
+			pixels[ i ] = ( float ) ( bpwx[ ix ] * bpwy[ iy ] );
 		}
 		return bpw;
 	}
-	
+
 	/**
-	 * Generate a 2D matrix of the radius polar coordinates, centered in the middle of the image.
-	 * @param nx  the width in pixel of the desired matrix
-	 * @param ny  the height in pixel of the desired matrix
-	 * @return  the coordinate matrix, as a FloatProcessor, where values range from 0 to 
-	 * sqrt(nx^2+ny^2)/2
+	 * Generate a 2D matrix of the radius polar coordinates, centered in the
+	 * middle of the image.
+	 * 
+	 * @param nx
+	 *            the width in pixel of the desired matrix
+	 * @param ny
+	 *            the height in pixel of the desired matrix
+	 * @return the coordinate matrix, as a FloatProcessor, where values range
+	 *         from 0 to sqrt(nx^2+ny^2)/2
 	 * @see #makeThetaMatrix(int, int)
 	 */
-	protected static final FloatProcessor makeRMatrix(final int nx, final int ny) {
-		final FloatProcessor r = new FloatProcessor(nx, ny);
-		final float[] pixels = (float[]) r.getPixels();
+	protected static final FloatProcessor makeRMatrix( final int nx, final int ny )
+	{
+		final FloatProcessor r = new FloatProcessor( nx, ny );
+		final float[] pixels = ( float[] ) r.getPixels();
 		final float xc = nx / 2.0f;
 		final float yc = ny / 2.0f;
 		int ix, iy;
-		for (int i = 0; i < pixels.length; i++) {
+		for ( int i = 0; i < pixels.length; i++ )
+		{
 			iy = i / nx;
 			ix = i % nx;
-			pixels[i] = (float) Math.sqrt( (ix-xc)*(ix-xc) + (iy-yc)*(iy-yc));
-		}		
+			pixels[ i ] = ( float ) Math.sqrt( ( ix - xc ) * ( ix - xc ) + ( iy - yc ) * ( iy - yc ) );
+		}
 		return r;
 	}
-	
+
 	/**
-	 * Generate a 2D matrix of the angle polar coordinates, centered in the middle of the image.
-	 * @param nx  the width in pixel of the desired matrix
-	 * @param ny  the height in pixel of the desired matrix
-	 * @return  the coordinate matrix, as a FloatProcessor, where angles are in radians, and range 
-	 * from -pi to pi
+	 * Generate a 2D matrix of the angle polar coordinates, centered in the
+	 * middle of the image.
+	 * 
+	 * @param nx
+	 *            the width in pixel of the desired matrix
+	 * @param ny
+	 *            the height in pixel of the desired matrix
+	 * @return the coordinate matrix, as a FloatProcessor, where angles are in
+	 *         radians, and range from -pi to pi
 	 * @see #makeRMatrix(int, int)
 	 */
-	protected static final FloatProcessor makeThetaMatrix(final int nx, final int ny) {
-		final FloatProcessor theta = new FloatProcessor(nx, ny);
-		final float[] pixels = (float[]) theta.getPixels();
+	protected static final FloatProcessor makeThetaMatrix( final int nx, final int ny )
+	{
+		final FloatProcessor theta = new FloatProcessor( nx, ny );
+		final float[] pixels = ( float[] ) theta.getPixels();
 		final float xc = nx / 2.0f;
 		final float yc = ny / 2.0f;
 		int ix, iy;
-		for (int i = 0; i < pixels.length; i++) {
+		for ( int i = 0; i < pixels.length; i++ )
+		{
 			iy = i / nx;
 			ix = i % nx;
-			pixels[i] = (float) Math.atan2( -(iy-yc), ix-xc); // so that we have upright orientation
-		}		
+			pixels[ i ] = ( float ) Math.atan2( -( iy - yc ), ix - xc ); // so
+																			// that
+																			// we
+																			// have
+																			// upright
+																			// orientation
+		}
 		return theta;
 	}
-	
+
 	/**
-	 * Generate a bluish to greenish to redish LUT for the display of histograms.
-	 * @param ncol  the number of colors in the LUT
-	 * @return  the LUT
+	 * Generate a bluish to greenish to redish LUT for the display of
+	 * histograms.
+	 * 
+	 * @param ncol
+	 *            the number of colors in the LUT
+	 * @return the LUT
 	 */
-	protected static final LookupPaintScale createLUT(final int ncol) {
-		final float[][] colors = new float[][]  { 
-				{0, 75/255f, 150/255f},
-				{0.1f, 0.8f, 0.1f},
-				{150/255f, 75/255f, 0}
+	protected static final LookupPaintScale createLUT( final int ncol )
+	{
+		final float[][] colors = new float[][] {
+				{ 0, 75 / 255f, 150 / 255f },
+				{ 0.1f, 0.8f, 0.1f },
+				{ 150 / 255f, 75 / 255f, 0 }
 		};
-		final float[] limits = new float[] {0, 0.5f, 1};
-		final LookupPaintScale lut = new LookupPaintScale(0, 1, Color.BLACK);
+		final float[] limits = new float[] { 0, 0.5f, 1 };
+		final LookupPaintScale lut = new LookupPaintScale( 0, 1, Color.BLACK );
 		float val;
 		float r, g, b;
-		for (int j = 0; j < ncol; j++) {			
-			val = (float)j/(float)(ncol-0.99f);
+		for ( int j = 0; j < ncol; j++ )
+		{
+			val = j / ( ncol - 0.99f );
 			int i = 0;
-			for (i = 0; i < limits.length; i++) {
-				if (val < limits[i]) {
+			for ( i = 0; i < limits.length; i++ )
+			{
+				if ( val < limits[ i ] )
+				{
 					break;
 				}
 			}
 			i = i - 1;
-			r = colors[i][0] + (val-limits[i])/(limits[i+1]-limits[i])*(colors[i+1][0]-colors[i][0]); 
-			g = colors[i][1] + (val-limits[i])/(limits[i+1]-limits[i])*(colors[i+1][1]-colors[i][1]); 
-			b = colors[i][2] + (val-limits[i])/(limits[i+1]-limits[i])*(colors[i+1][2]-colors[i][2]); 
-			lut.add(val, new Color(r, g, b));
+			r = colors[ i ][ 0 ] + ( val - limits[ i ] ) / ( limits[ i + 1 ] - limits[ i ] ) * ( colors[ i + 1 ][ 0 ] - colors[ i ][ 0 ] );
+			g = colors[ i ][ 1 ] + ( val - limits[ i ] ) / ( limits[ i + 1 ] - limits[ i ] ) * ( colors[ i + 1 ][ 1 ] - colors[ i ][ 1 ] );
+			b = colors[ i ][ 2 ] + ( val - limits[ i ] ) / ( limits[ i + 1 ] - limits[ i ] ) * ( colors[ i + 1 ][ 2 ] - colors[ i ][ 2 ] );
+			lut.add( val, new Color( r, g, b ) );
 		}
 		return lut;
 	}
-	
+
 	/*
 	 * MAIN METHOD
 	 */
-	
-	public static void main(String[] args) {
-		
-		// Generate a test image
-		ImagePlus imp = NewImage.createShortImage("Lines", 400, 400, 1, NewImage.FILL_BLACK);
-		ImageProcessor ip = imp.getProcessor();
-		ip.setLineWidth(4);
-		ip.setColor(Color.WHITE);
-		Line line_30deg 	= new Line(10.0, 412.0, 446.4102, 112.0); // 400px long line, 30º
-		Line line_30deg2 = new Line(10.0, 312.0, 446.4102, 12.0); // 400px long line, 30º
-		Line line_m60deg = new Line(10.0, 10, 300.0, 446.4102); // 400px long line, 60º
-		Line[] rois = new Line[] { line_30deg, line_30deg2, line_m60deg };
-		for ( Line roi : rois) {
-			ip.draw(roi);
-		}		
-		GaussianBlur smoother = new GaussianBlur();
-		smoother.blurGaussian(ip, 2.0, 2.0, 1e-2);		
-		imp.show();
-		
-		AnalysisMethod method;
-		ArrayList<double[]> fit_results;
-		double center;
-		
-		Directionality_ da = new Directionality_();
-		da.setImagePlus(imp);
-		
-		da.setBinNumber(60);
-		da.setBinStart(-90);
 
-		da.setBuildOrientationMapFlag(false);
-		da.setDebugFlag(false);
-		
-		
+	public static void main( final String[] args )
+	{
+
+		// Generate a test image
+		final ImagePlus imp = NewImage.createShortImage( "Lines", 400, 400, 1, NewImage.FILL_BLACK );
+		final ImageProcessor ip = imp.getProcessor();
+		ip.setLineWidth( 4 );
+		ip.setColor( Color.WHITE );
+		final Line line_30deg = new Line( 10.0, 412.0, 446.4102, 112.0 ); // 400px
+		// long
+		// line, 30º
+		final Line line_30deg2 = new Line( 10.0, 312.0, 446.4102, 12.0 ); // 400px
+		// long
+		// line, 30º
+		final Line line_m60deg = new Line( 10.0, 10, 300.0, 446.4102 ); // 400px
+																		// long
+		// line, 60º
+		final Line[] rois = new Line[] { line_30deg, line_30deg2, line_m60deg };
+		for ( final Line roi : rois )
+		{
+			ip.draw( roi );
+		}
+		final GaussianBlur smoother = new GaussianBlur();
+		smoother.blurGaussian( ip, 2.0, 2.0, 1e-2 );
+		imp.show();
+
+		AnalysisMethod method;
+		ArrayList< double[] > fit_results;
+		double center;
+
+		final Directionality_ da = new Directionality_();
+		da.setImagePlus( imp );
+
+		da.setBinNumber( 60 );
+		da.setBinStart( -90 );
+
+		da.setBuildOrientationMapFlag( false );
+		da.setDebugFlag( false );
+
 		method = AnalysisMethod.FOURIER_COMPONENTS;
-		da.setMethod(method);
+		da.setMethod( method );
 		da.computeHistograms();
 		fit_results = da.getFitParameters();
-		center = fit_results.get(0)[2];
-		System.out.println("With method: "+method);
-		System.out.println(String.format("Found maxima at %.1f, expected it at 30°.\n", center, 30));
+		center = fit_results.get( 0 )[ 2 ];
+		System.out.println( "With method: " + method );
+		System.out.println( String.format( "Found maxima at %.1f, expected it at 30°.\n", center, 30 ) );
 //		new ImagePlus("Orientation map for "+imp.getShortTitle(),da.getOrientationMap()).show();
-		
+
 		/*
-		method = AnalysisMethod.LOCAL_GRADIENT_ORIENTATION;
-		da.setMethod(method);
-		da.computesHistograms();
-		fit_results = da.getFitParameters();
-		center = fit_results.get(0)[2];
-		System.out.println("With method: "+method);
-		System.out.println(String.format("Found maxima at %.1f, expected it at 30º.\n", center, 30));
-		new ImagePlus("Orientation map for "+imp.getShortTitle(),da.getOrientationMap()).show();
+		 * method = AnalysisMethod.LOCAL_GRADIENT_ORIENTATION;
+		 * da.setMethod(method); da.computesHistograms(); fit_results =
+		 * da.getFitParameters(); center = fit_results.get(0)[2];
+		 * System.out.println("With method: "+method);
+		 * System.out.println(String.
+		 * format("Found maxima at %.1f, expected it at 30º.\n", center, 30));
+		 * new ImagePlus("Orientation map for "+imp.getShortTitle(),da.
+		 * getOrientationMap()).show();
 		 */
-		
+
 //		ImagePlus cw = generateColorWheel();
 //		cw.show();
 //		addColorMouseListener(cw.getCanvas());
-		
-		da.plotResults().setVisible(true);
-		da.displayResultsTable().show("Table");
+
+		da.plotResults().setVisible( true );
+		da.displayResultsTable().show( "Table" );
 
 	}
-	
+
 }
