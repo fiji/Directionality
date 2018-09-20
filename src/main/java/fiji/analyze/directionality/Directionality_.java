@@ -274,6 +274,12 @@ public class Directionality_ implements PlugIn
 	 */
 	private static double setting_bin_start = -90;
 
+	/**
+	 * The last bin in degrees when displaying the histogram, so that we are
+	 * able to limit the range of angles to analyse
+	 */
+	private static double setting_bin_end = 90;
+
 	/** Method used for analysis, as set by the user. */
 	private static AnalysisMethod setting_method = AnalysisMethod.FOURIER_COMPONENTS;
 
@@ -305,6 +311,12 @@ public class Directionality_ implements PlugIn
 	 * not forced to start at -90
 	 */
 	private double bin_start = -90;
+
+	/**
+	 * The last bin in degrees when displaying the histogram, so that we are
+	 * able to limit the range of angles to analyse
+	 */
+	private double bin_end = 90;
 
 	/** Method used for analysis, as set by the user. */
 	private AnalysisMethod method = AnalysisMethod.FOURIER_COMPONENTS;
@@ -385,7 +397,7 @@ public class Directionality_ implements PlugIn
 	 * 
 	 * @param arg
 	 *            the string argument, for instance "nbins=90, start=-90,
-	 *            method=gradient"
+	 *            end=90, method=gradient"
 	 */
 	@Override
 	public void run( final String arg )
@@ -408,6 +420,7 @@ public class Directionality_ implements PlugIn
 		{
 
 			// Parse possible macro inputs
+			boolean endIsSpecified = false;
 			String str = parseArgumentString( arg, "nbins=" );
 			if ( null != str )
 			{
@@ -434,6 +447,20 @@ public class Directionality_ implements PlugIn
 					return;
 				}
 			}
+			str = parseArgumentString( arg, "end=" );
+			if ( null != str )
+			{
+				try
+				{
+					bin_end = Double.parseDouble( str );
+					endIsSpecified = true;
+				}
+				catch ( final NumberFormatException nfe )
+				{
+					IJ.error( "Directionality: bad argument for end point: " + str );
+					return;
+				}
+			}
 			str = parseArgumentString( arg, "method=" );
 			if ( null != str )
 			{
@@ -445,6 +472,11 @@ public class Directionality_ implements PlugIn
 					}
 				}
 			}
+			// if not indicated, the angles cover the full range
+			if ( ! endIsSpecified )
+			{
+				bin_end = bin_start + 180;
+			}
 		}
 		else
 		{
@@ -453,6 +485,8 @@ public class Directionality_ implements PlugIn
 				return;
 		}
 
+		bin_end = Math.min( bin_end , bin_start + 180 );
+		
 		// Launch analysis, this will set the directionality field
 		computeHistograms();
 
@@ -488,7 +522,7 @@ public class Directionality_ implements PlugIn
 			final ImagePlus imp_map = new ImagePlus( "Orientation map for " + imp.getShortTitle(), orientation_map );
 			imp_map.show();
 			final ImageCanvas canvas_map = imp_map.getCanvas();
-			addColorMouseListener( canvas_map );
+			addColorMouseListener( canvas_map, (float) bin_start, (float) bin_end );
 		}
 
 		if ( display_color_wheel )
@@ -496,7 +530,7 @@ public class Directionality_ implements PlugIn
 			final ImagePlus cw = generateColorWheel();
 			cw.show();
 			final ImageCanvas canvas_cw = cw.getCanvas();
-			addColorMouseListener( canvas_cw );
+			addColorMouseListener( canvas_cw, (float) bin_start, (float) bin_end );
 		}
 	}
 
@@ -519,7 +553,7 @@ public class Directionality_ implements PlugIn
 		goodness_of_fit = null;
 
 		// Prepare helper fields
-		bins = prepareBins( nbins );
+		bins = prepareBins( nbins, bin_start, bin_end );
 		switch ( method )
 		{
 		case FOURIER_COMPONENTS:
@@ -590,33 +624,14 @@ public class Directionality_ implements PlugIn
 		if ( null == histograms )
 			return null;
 
-		// Wrap shifting angle to [-90 90[
-		final double wrapped_angle = ( ( bin_start + 90 ) % 180 + 180 ) % 180 - 90;
-		int wrap_index = 0;
-		for ( int i = 0; i < bins.length; i++ )
-		{
-			if ( wrapped_angle <= Math.toDegrees( bins[ i ] ) )
-			{
-				wrap_index = i;
-				break;
-			}
-		}
-
-		final double[] wrapped_bins = new double[ nbins ];
-		for ( int i = 0; i < wrapped_bins.length; i++ )
-		{
-			wrapped_bins[ i ] = Math.toDegrees( bins[ wrap_index ] + ( bins[ 1 ] - bins[ 0 ] ) * i );
-		}
-
 		final ResultsTable table = new ResultsTable();
 		table.setPrecision( 9 );
 		final String[] names = makeNames();
 		double[] dir;
-		int index = 0;
-		for ( int i = wrap_index; i < bins.length; i++ )
+		for ( int i = 0; i < bins.length; i++ )
 		{
 			table.incrementCounter();
-			table.addValue( "Direction (°)", wrapped_bins[ index ] );
+			table.addValue( "Direction (°)", Math.toDegrees( bins[ i ] ));
 			for ( int j = 0; j < names.length; j++ )
 			{
 				dir = histograms.get( j );
@@ -624,20 +639,6 @@ public class Directionality_ implements PlugIn
 				final double val = CurveFitter.f( CurveFitter.GAUSSIAN, params_from_fit.get( j ), bins[ i ] );
 				table.addValue( names[ j ] + "-fit", val );
 			}
-			index++;
-		}
-		for ( int i = 0; i < wrap_index; i++ )
-		{
-			table.incrementCounter();
-			table.addValue( "Direction (°)", wrapped_bins[ index ] );
-			for ( int j = 0; j < names.length; j++ )
-			{
-				dir = histograms.get( j );
-				table.addValue( names[ j ], dir[ i ] );
-				final double val = CurveFitter.f( CurveFitter.GAUSSIAN, params_from_fit.get( j ), bins[ i ] );
-				table.addValue( names[ j ] + "-fit", val );
-			}
-			index++;
 		}
 
 		return table;
@@ -697,7 +698,7 @@ public class Directionality_ implements PlugIn
 						xn = xn + 180.0;
 					}
 				}
-				if ( ( xn < center - SIGMA_NUMBER * std ) || ( xn > center + SIGMA_NUMBER * std ) )
+				if ( ( xn < ( center - SIGMA_NUMBER * std ) ) || ( xn > ( center + SIGMA_NUMBER * std ) ) )
 				{
 					continue;
 				}
@@ -730,25 +731,10 @@ public class Directionality_ implements PlugIn
 		final String[] names = makeNames();
 		XYSeries series;
 
-		// Shift histograms
-
-		// Wrap shifting angle to [-90 90[
-		final double wrapped_angle = ( ( bin_start + 90 ) % 180 + 180 ) % 180 - 90;
-		int wrap_index = 0;
-		for ( int i = 0; i < bins.length; i++ )
+		final double[] degrees_bins = new double[ nbins ];
+		for ( int i = 0; i < degrees_bins.length; i++ )
 		{
-			if ( wrapped_angle <= Math.toDegrees( bins[ i ] ) )
-			{
-				wrap_index = i;
-				break;
-			}
-		}
-
-		// Wrap bins
-		final double[] wrapped_bins = new double[ nbins ];
-		for ( int i = 0; i < wrapped_bins.length; i++ )
-		{
-			wrapped_bins[ i ] = Math.toDegrees( bins[ wrap_index ] + ( bins[ 1 ] - bins[ 0 ] ) * i );
+			degrees_bins[ i ] = Math.toDegrees( bins[ i ] );
 		}
 
 		// This is where we shift histograms
@@ -757,16 +743,9 @@ public class Directionality_ implements PlugIn
 		{
 			dir = histograms.get( i );
 			series = new XYSeries( names[ i ] );
-			int index = 0;
-			for ( int j = wrap_index; j < nbins; j++ )
+			for ( int j = 0; j < nbins; j++ )
 			{
-				series.add( wrapped_bins[ index ], dir[ j ] );
-				index++;
-			}
-			for ( int j = 0; j < wrap_index; j++ )
-			{
-				series.add( wrapped_bins[ index ], dir[ j ] );
-				index++;
+				series.add( degrees_bins[ j ], dir[ j ] );
 			}
 			histogram_plots.addSeries( series );
 		}
@@ -802,34 +781,21 @@ public class Directionality_ implements PlugIn
 																// times
 			for ( int i = 0; i < X.length; i++ )
 			{
-				X[ i ] = ( wrapped_bins[ 0 ] + ( wrapped_bins[ nbins - 1 ] - wrapped_bins[ 0 ] ) / X.length * i );
+				X[ i ] = ( degrees_bins[ 0 ] + ( degrees_bins[ nbins - 1 ] - degrees_bins[ 0 ] ) / X.length * i );
 			}
 			// Create dataset
 			final XYSeriesCollection fits = new XYSeriesCollection();
 			XYSeries fit_series;
-			double val, center, xn;
+			double val, xn;
 			double[] params;
-			final double half_range = Math.PI / 2;
 			for ( int i = 0; i < histograms.size(); i++ )
 			{ // we have to deal with periodic issue here too
 				params = params_from_fit.get( i ).clone();
-				center = params[ 2 ];
 				fit_series = new XYSeries( names[ i ] );
 				for ( int j = 0; j < X.length; j++ )
 				{
 					xn = Math.toRadians( X[ j ] ); // back to radians, for the
 													// fit
-					if ( Math.abs( xn - center ) > half_range )
-					{ // too far
-						if ( xn > center )
-						{
-							xn = xn - 2 * half_range;
-						}
-						else
-						{
-							xn = xn + 2 * half_range;
-						}
-					}
 					val = CurveFitter.f( CurveFitter.GAUSSIAN, params, xn );
 					fit_series.add( X[ j ], val );
 				}
@@ -844,7 +810,7 @@ public class Directionality_ implements PlugIn
 			}
 
 		}
-		plot.getDomainAxis().setRange( wrapped_bins[ 0 ], wrapped_bins[ nbins - 1 ] );
+		plot.getDomainAxis().setRange( degrees_bins[ 0 ], degrees_bins[ nbins - 1 ] );
 
 		final ChartPanel chartPanel = new ChartPanel( chart );
 		chartPanel.setPreferredSize( new java.awt.Dimension( 500, 270 ) );
@@ -871,11 +837,9 @@ public class Directionality_ implements PlugIn
 		double[] dir;
 		final double[] init_params = new double[ 4 ];
 		double[] params = new double[ 4 ];
-		double[] padded_dir;
-		double[] padded_bins;
 
 		double ymax, ymin;
-		int imax, shift_index, current_index;
+		int imax;
 
 		// Prepare fitter and function
 		CurveFitter fitter = null;
@@ -903,44 +867,17 @@ public class Directionality_ implements PlugIn
 				}
 			}
 
-			// Shift found peak to the center (periodic issue) and add to fitter
-			padded_dir = new double[ bins.length ];
-			padded_bins = new double[ bins.length ];
-			shift_index = bins.length / 2 - imax;
-			for ( int j = 0; j < bins.length; j++ )
-			{
-				current_index = j - shift_index;
-				if ( current_index < 0 )
-				{
-					current_index += bins.length;
-				}
-				if ( current_index >= bins.length )
-				{
-					current_index -= bins.length;
-				}
-				padded_dir[ j ] = dir[ current_index ];
-				padded_bins[ j ] = bins[ j ];
-			}
-			fitter = new CurveFitter( padded_bins, padded_dir );
+			fitter = new CurveFitter( bins, dir );
 
 			init_params[ 0 ] = ymin; // base
 			init_params[ 1 ] = ymax; // peak value
-			init_params[ 2 ] = padded_bins[ bins.length / 2 ]; // peak center
-																// with padding
+			init_params[ 2 ] = bins[ imax ]; // peak center
 			init_params[ 3 ] = 2 * ( bins[ 1 ] - bins[ 0 ] ); // std
 
 			// Do fit
 			fitter.doFit( CurveFitter.GAUSSIAN );
 			params = fitter.getParams();
 			goodness_of_fit[ i ] = fitter.getFitGoodness();
-			if ( shift_index < 0 )
-			{ // back into orig coordinates
-				params[ 2 ] += ( bins[ -shift_index ] - bins[ 0 ] );
-			}
-			else
-			{
-				params[ 2 ] -= ( bins[ shift_index ] - bins[ 0 ] );
-			}
 			params[ 3 ] = Math.abs( params[ 3 ] ); // std is positive
 			params_from_fit.add( params );
 		}
@@ -1105,7 +1042,7 @@ public class Directionality_ implements PlugIn
 	{
 		final double[] degree_bins = new double[ nbins ];
 		for ( int i = 0; i < degree_bins.length; i++ )
-			degree_bins[ i ] = bin_start + 180 * ( bins[ i ] + Math.PI / 2 ) / Math.PI;
+			degree_bins[ i ] = 180 * bins[ i ]  / Math.PI;
 
 		return degree_bins;
 	}
@@ -1117,7 +1054,6 @@ public class Directionality_ implements PlugIn
 	public void setBinNumber( final int nbins )
 	{
 		this.nbins = nbins;
-		prepareBins( nbins );
 		histograms = null;
 	}
 
@@ -1136,6 +1072,7 @@ public class Directionality_ implements PlugIn
 	public void setBinStart( final double bin_start )
 	{
 		this.bin_start = bin_start;
+		this.bin_end = bin_start + 180;
 		histograms = null;
 	}
 
@@ -1145,6 +1082,25 @@ public class Directionality_ implements PlugIn
 	public double getBinStart()
 	{
 		return bin_start;
+	}
+
+	/**
+	 * Set the desired end for the angle bins, in degrees. This resets the
+	 * <code>histograms</code> field to null.
+	 */
+	public void setBinRange( final double bin_start, final double bin_end )
+	{
+		this.bin_start = bin_start;
+		this.bin_end = Math.min( bin_end , bin_start + 180 );
+		histograms = null;
+	}
+
+	/**
+	 * Return the current value for angle bin end, in degrees.
+	 */
+	public double getBinEnd()
+	{
+		return bin_end;
 	}
 
 	/**
@@ -1201,7 +1157,8 @@ public class Directionality_ implements PlugIn
 	/**
 	 * Display the dialog when the plugin is launched from ImageJ. A successful
 	 * interaction will result in setting the {@link #nbins},
-	 * {@link #bin_start}, {@link #display_table} and {@link #debug} fields.
+	 * {@link #bin_start}, {@link #bin_end}, {@link #display_table} and 
+	 * {@link #debug} fields.
 	 * 
 	 * @return true is the user has pressed the 'Cancel' button.
 	 */
@@ -1222,6 +1179,7 @@ public class Directionality_ implements PlugIn
 		gd.addChoice( "Method:", method_names, setting_method.toString() );
 		gd.addNumericField( "Nbins: ", setting_nbins, 0 );
 		gd.addNumericField( "Histogram start", setting_bin_start, 0, 4, "°" );
+		gd.addNumericField( "Histogram end", setting_bin_end, 0, 4, "°" );
 		gd.addCheckbox( "Build orientation map", setting_build_orientation_map );
 		gd.addCheckbox( "Display_color_wheel", setting_display_color_wheel );
 		gd.addCheckbox( "Display_table", setting_display_table );
@@ -1245,6 +1203,7 @@ public class Directionality_ implements PlugIn
 		// Reflect user settings in fields
 		nbins = ( int ) gd.getNextNumber();
 		bin_start = gd.getNextNumber();
+		bin_end = gd.getNextNumber();
 		build_orientation_map = gd.getNextBoolean();
 		display_color_wheel = gd.getNextBoolean();
 		display_table = gd.getNextBoolean();
@@ -1253,6 +1212,7 @@ public class Directionality_ implements PlugIn
 		// Store last user selected settings in default
 		setting_nbins = nbins;
 		setting_bin_start = bin_start;
+		setting_bin_end = bin_end;
 		setting_build_orientation_map = build_orientation_map;
 		setting_display_color_wheel = display_color_wheel;
 		setting_display_table = display_table;
@@ -1326,7 +1286,7 @@ public class Directionality_ implements PlugIn
 	 * This method implements the local gradient orientation analysis method.
 	 * <p>
 	 * The gradient is calculated using a 5x5 Sobel filter. The gradient
-	 * orientation from -pi/2 to pi/2 is calculated and put in the histogram.
+	 * orientation within the given angular range is calculated and put in the histogram.
 	 * The histogram get the square of the norm as value, so that only strong
 	 * gradient contribute to it. We use the square of the norm, so that the
 	 * histogram calculated with this method has the same dimension that with
@@ -1338,7 +1298,7 @@ public class Directionality_ implements PlugIn
 	private final double[] local_gradient_orientation( final FloatProcessor ip )
 	{
 //		double[] dir = new double[nbins]; // histo with #bins
-		final double[] norm_dir = new double[ nbins ]; // histo from -pi to pi;
+		final double[] norm_dir = new double[ nbins ]; // histo;
 		final FloatProcessor grad_x = ( FloatProcessor ) ip.duplicate();
 		final FloatProcessor grad_y = ( FloatProcessor ) ip.duplicate();
 		final Convolver convolver = new Convolver();
@@ -1366,9 +1326,31 @@ public class Directionality_ implements PlugIn
 		final float[] pixels_r = new float[ pixels_gx.length ];
 
 		double norm, max_norm = 0.0;
-		double angle;
+		double angle, angle_degs, angle_ref;
+		double wrapped_start, wrapped_end;
+		double range1_min, range1_max, range2_min, range2_max;
 		int histo_index;
 		float dx, dy;
+		
+		// generate range of allowed angles within -90 and +90 degs  
+		wrapped_start = ( ( bin_start + 90 ) % 180 + 180 ) % 180 - 90;
+		wrapped_end = ( ( bin_end + 90 ) % 180 + 180 ) % 180 - 90;
+		
+		if ( wrapped_end <= wrapped_start ) {
+			range1_min = -90;
+			range1_max = wrapped_end;
+			range2_min = wrapped_start;
+			range2_max = 90;
+		}
+		else
+		{
+			range1_min = wrapped_start;
+			range1_max = wrapped_end;
+			range2_min = wrapped_start;
+			range2_max = wrapped_end;
+		}
+
+		
 		for ( int i = 0; i < pixels_gx.length; i++ )
 		{
 			dx = pixels_gx[ i ];
@@ -1376,27 +1358,42 @@ public class Directionality_ implements PlugIn
 			norm = dx * dx + dy * dy; // We keep the square so as to have the
 										// same dimension that Fourier
 										// components analysis
-			if ( norm > max_norm )
-			{
-				max_norm = norm;
-			}
 			angle = Math.atan( dy / dx );
-			pixels_theta[ i ] = ( float ) ( angle * 180.0 / Math.PI ); // deg,
-																		// -90º
-																		// to
-																		// 90º
-			pixels_r[ i ] = ( float ) norm;
-			histo_index = ( int ) ( ( nbins / 2.0 ) * ( 1 + angle / ( Math.PI / 2 ) ) ); // where
-																							// to
-																							// put
-																							// it
-			if ( histo_index == nbins )
-			{
-				histo_index = 0; // circular shift in case of exact vertical
-									// orientation
+			angle_degs = angle * 180.0 / Math.PI;
+
+			if ( ( angle_degs >= range1_min && angle_degs <= range1_max )
+					|| ( angle_degs >= range2_min && angle_degs <= range2_max ) ) {
+				
+				if ( norm > max_norm )
+				{
+					max_norm = norm;
+				}
+				
+				angle_ref = angle * 180.0 / Math.PI;
+				while ( angle_ref > bin_end ) {
+					angle_ref -= 180;
+				}
+				while ( angle_ref < bin_start ) {
+					angle_ref += 180;
+				}
+
+				pixels_theta[ i ] = ( float ) ( angle_ref ); // deg,
+
+				pixels_r[ i ] = ( float ) norm;
+				
+				histo_index = ( int ) ( ( angle_ref - bin_start ) / ( ( bins[ 1 ] - bins[ 0 ] ) * 180.0 / Math.PI ) ); 
+				if ( histo_index == nbins )
+				{
+					histo_index = 0; // circular shift in case of exact vertical
+										// orientation
+				}
+				norm_dir[ histo_index ] += norm; // we put the norm, the stronger
+													// the better
 			}
-			norm_dir[ histo_index ] += norm; // we put the norm, the stronger
-												// the better
+			else
+			{
+				pixels_theta[ i ] = ( float ) ( bins[ 0 ] * 180. / Math.PI ); // arbitrary value, since norm will be zero
+			}
 		}
 
 		if ( build_orientation_map )
@@ -1421,7 +1418,7 @@ public class Directionality_ implements PlugIn
 			final byte[] S = new byte[ pixels_r.length ];
 			for ( int i = 0; i < pixels_r.length; i++ )
 			{
-				H[ i ] = ( byte ) ( 255.0 * ( pixels_theta[ i ] + 90.0 ) / 180.0 );
+				H[ i ] = ( byte ) ( 255.0 * ( pixels_theta[ i ] - bins[ 0 ] * 180. / Math.PI) / ( bin_end - bin_start )  );
 				S[ i ] = ( byte ) ( 255.0 * pixels_r[ i ] / max_norm ); // Math.log10(1.0
 																		// +
 																		// 9.0*pixels_r[i]
@@ -1513,11 +1510,11 @@ public class Directionality_ implements PlugIn
 				// Get a centered power spectrum with right size
 				pspectrum = fft.conjugateMultiply( fft );
 				pspectrum.setRoi( original_square );
-				small_pspectrum = ( FloatProcessor ) pspectrum.crop();
 				spectrum_px = ( float[] ) pspectrum.getPixels(); // small_pspectrum.getPixels();
 
 				if ( debug )
 				{
+					small_pspectrum = ( FloatProcessor ) pspectrum.crop();
 					spectra.addSlice( "block nbr " + ( ix + 1 ) * ( iy + 1 ), displayLog( small_pspectrum ) );
 				}
 
@@ -1572,10 +1569,7 @@ public class Directionality_ implements PlugIn
 							if ( weights[ j ] > max_weights[ j ] )
 							{
 								max_weights[ j ] = weights[ j ];
-								best_angle[ j ] = ( float ) bins[ bin ]; // rad,
-																			// [-pi/2
-																			// -
-																			// pi/2[
+								best_angle[ j ] = ( float ) bins[ bin ]; // radians
 							}
 							// Overall maximum calculation
 							if ( weights[ j ] > max_norm )
@@ -1632,8 +1626,7 @@ public class Directionality_ implements PlugIn
 						if ( ( 255 * saturation_px[ i ] / max_norm ) >= big_saturation_px[ i ] )
 						{
 							big_saturation_px[ i ] = ( 255 * saturation_px[ i ] / max_norm );
-//							big_hue_px[i] = (float) ( 255 *  ( ( 1 + hue_px[i]/Math.PI ) % 1 ) ); 
-							big_hue_px[ i ] = ( float ) ( 255 * ( ( 0.5 + hue_px[ i ] / Math.PI ) ) );
+							big_hue_px[ i ] = ( float ) ( 255 * ( ( ( hue_px[ i ] - bins[ 0 ] ) / ( bins[ nbins - 1 ] - bins[ 0 ] ) ) ) );
 						}
 					}
 				}
@@ -1678,7 +1671,7 @@ public class Directionality_ implements PlugIn
 		final float[] theta_px = ( float[] ) theta.getPixels();
 
 		double current_r, current_theta, theta_c, angular_part, radial_part;
-		final double theta_bw = Math.PI / ( nbins - 1 );
+		final double theta_bw = bins[ 1 ] - bins[ 0 ];
 		final double r_c = pad_size / 4;
 		final double r_bw = r_c / 2;
 
@@ -1686,7 +1679,15 @@ public class Directionality_ implements PlugIn
 		{
 
 			pixels = new float[ pad_size * pad_size ];
-			theta_c = bins[ i - 1 ] + Math.PI / 2;
+
+			theta_c = bins[ i - 1];
+			while ( theta_c >= Math.PI ) {
+				theta_c -= Math.PI;
+			}
+			while ( theta_c < 0 ) {
+				theta_c += Math.PI;
+			}
+			theta_c -= Math.PI/2;
 
 			for ( int index = 0; index < pixels.length; index++ )
 			{
@@ -1705,18 +1706,15 @@ public class Directionality_ implements PlugIn
 					angular_part = angular_part * angular_part;
 
 				}
-				else if ( Math.abs( current_theta - ( theta_c - Math.PI ) ) < theta_bw
-						|| Math.abs( current_theta - 2 * Math.PI - ( theta_c - Math.PI ) ) < theta_bw )
+				else if ( Math.abs( current_theta - ( theta_c - Math.PI ) ) < theta_bw )
 				{
-					angular_part = Math.cos( ( current_theta - theta_c ) / theta_bw * Math.PI / 2.0 );
-					if ( nbins % 2 == 0 )
-					{
-						angular_part = 1 - angular_part * angular_part;
-					}
-					else
-					{
-						angular_part = angular_part * angular_part;
-					}
+					angular_part = Math.cos( ( current_theta - ( theta_c - Math.PI ) ) / theta_bw * Math.PI / 2.0 );
+					angular_part = angular_part * angular_part;
+				}
+				else if ( Math.abs( current_theta - ( theta_c + Math.PI ) ) < theta_bw )
+				{
+					angular_part = Math.cos( ( current_theta - ( theta_c + Math.PI ) ) / theta_bw * Math.PI / 2.0 );
+					angular_part = angular_part * angular_part;
 				}
 				else
 				{
@@ -1728,7 +1726,7 @@ public class Directionality_ implements PlugIn
 			}
 
 			filters.setPixels( pixels, i );
-			filters.setSliceLabel( "Angle: " + String.format( "%.1f", theta_c * 180 / Math.PI ), i );
+			filters.setSliceLabel( "Angle: " + String.format( "%.1f", bins[ i - 1] * 180 / Math.PI ), i );
 		}
 		return filters;
 	}
@@ -1825,7 +1823,7 @@ public class Directionality_ implements PlugIn
 		return imp;
 	}
 
-	protected static final void addColorMouseListener( final ImageCanvas canvas )
+	protected static final void addColorMouseListener( final ImageCanvas canvas, float angle_start, float angle_end )
 	{
 
 		final MouseMotionListener ml = new MouseMotionListener()
@@ -1848,7 +1846,7 @@ public class Directionality_ implements PlugIn
 					final int g = ( c & 0xff00 ) >> 8;
 					final int b = c & 0xff;
 					final float[] hsb = Color.RGBtoHSB( r, g, b, null );
-					final float angle = hsb[ 0 ] * 180 - 90;
+					final float angle = hsb[ 0 ] * (angle_end - angle_start) + angle_start;
 					final float amount = hsb[ 1 ];
 					IJ.showStatus( String.format( "Orientation: %5.1f ° - Amont: %5.1f %%", angle, 100 * amount ) );
 				}
@@ -1862,18 +1860,22 @@ public class Directionality_ implements PlugIn
 	}
 
 	/**
-	 * Generate a bin array of angle in degrees, from -pi/2 to pi/2.
+	 * Generate a bin array of angle in radians, from -pi/2 to pi/2.
 	 * 
 	 * @return a double array of n elements, the angles in radians
 	 * @param n
 	 *            the number of elements to generate
+	 * @param first
+	 *            the angle of the first bin, in degrees
+	 * @param last
+	 *            the angle of the last bin, in degrees
 	 */
-	protected final static double[] prepareBins( final int n )
+	protected final static double[] prepareBins( final int n, final double first, final double last )
 	{
 		final double[] bins = new double[ n ];
 		for ( int i = 0; i < n; i++ )
 		{
-			bins[ i ] = i * Math.PI / n - Math.PI / 2;
+			bins[ i ] = ( first + i * ( last - first) / ( n - 1) ) / 180. * Math.PI ;
 		}
 		return bins;
 	}
@@ -1986,8 +1988,8 @@ public class Directionality_ implements PlugIn
 	{
 		final FloatProcessor r = new FloatProcessor( nx, ny );
 		final float[] pixels = ( float[] ) r.getPixels();
-		final float xc = nx / 2.0f;
-		final float yc = ny / 2.0f;
+		final int xc = nx / 2;
+		final int yc = ny / 2;
 		int ix, iy;
 		for ( int i = 0; i < pixels.length; i++ )
 		{
@@ -2014,8 +2016,8 @@ public class Directionality_ implements PlugIn
 	{
 		final FloatProcessor theta = new FloatProcessor( nx, ny );
 		final float[] pixels = ( float[] ) theta.getPixels();
-		final float xc = nx / 2.0f;
-		final float yc = ny / 2.0f;
+		final int xc = nx / 2;
+		final int yc = ny / 2;
 		int ix, iy;
 		for ( int i = 0; i < pixels.length; i++ )
 		{
@@ -2114,6 +2116,7 @@ public class Directionality_ implements PlugIn
 		da.setDebugFlag( false );
 
 		method = AnalysisMethod.FOURIER_COMPONENTS;
+//		method = AnalysisMethod.LOCAL_GRADIENT_ORIENTATION;
 		da.setMethod( method );
 		da.computeHistograms();
 		fit_results = da.getFitParameters();
@@ -2135,7 +2138,7 @@ public class Directionality_ implements PlugIn
 
 //		ImagePlus cw = generateColorWheel();
 //		cw.show();
-//		addColorMouseListener(cw.getCanvas());
+//		addColorMouseListener(cw.getCanvas(), (float) da.getBinStart(), (float) da.getBinEnd() );
 
 		da.plotResults().setVisible( true );
 		da.displayResultsTable().show( "Table" );
