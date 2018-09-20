@@ -1303,19 +1303,19 @@ public class Directionality_ implements PlugIn
 		final FloatProcessor grad_y = ( FloatProcessor ) ip.duplicate();
 		final Convolver convolver = new Convolver();
 		final float[] kernel_y = new float[] {
-				 -5f,  -4f, 0f,  4f,  5f,
-				 -8f, -10f, 0f, 10f,  8f,
-				-10f, -20f, 0f, 20f, 10f,
-				 -8f, -10f, 0f, 10f,  8f,
-				 -5f,  -4f, 0f,  4f,  5f }; // That's gx, but we want to have a 90º
+				-2f, -1f, 0f, 1f, 2f,
+				-3f, -2f, 0f, 2f, 3f,
+				-4f, -3f, 0f, 3f, 4f,
+				-3f, -2f, 0f, 2f, 3f,
+				-2f, -1f, 0f, 1f, 2f }; // That's gx, but we want to have a 90º
 										// shift, to comply to the rest of the
 										// plugin
 		final float[] kernel_x = new float[] {
-				 5f,   8f,  10f,   8f,  5f,
-				 4f,  10f,  20f,  10f,  4f,
-				 0f,   0f,   0f,   0f,  0f,
-				-4f, -10f, -20f, -10f, -4f,
-				-5f,  -8f, -10f,  -8f, -5f };
+				2f, 3f, 4f, 3f, 2f,
+				1f, 2f, 3f, 2f, 1f,
+				0, 0, 0, 0, 0,
+				-1f, -2f, -3f, -2f, -1f,
+				-2f, -3f, -4f, -3f, -2f };
 
 		convolver.convolveFloat( grad_x, kernel_x, 5, 5 );
 		convolver.convolveFloat( grad_y, kernel_y, 5, 5 );
