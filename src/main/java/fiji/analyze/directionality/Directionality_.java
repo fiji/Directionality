@@ -2084,15 +2084,13 @@ public class Directionality_ implements PlugIn
 		final ImageProcessor ip = imp.getProcessor();
 		ip.setLineWidth( 4 );
 		ip.setColor( Color.WHITE );
-		final Line line_30deg = new Line( 10.0, 412.0, 446.4102, 112.0 ); // 400px
-		// long
 		// line, 30º
-		final Line line_30deg2 = new Line( 10.0, 312.0, 446.4102, 12.0 ); // 400px
-		// long
+		final Line line_30deg = new Line( 10.0, 412.0, 446, 160.2753 );
 		// line, 30º
-		final Line line_m60deg = new Line( 10.0, 10, 300.0, 446.4102 ); // 400px
-																		// long
-		// line, 60º
+		final Line line_30deg2 = new Line( 10.0, 312.0, 446.4102, 60.2753 );
+		// line, -60º
+		final Line line_m60deg = new Line( 10.0, 10, 300.0, 512.2947 );
+
 		final Line[] rois = new Line[] { line_30deg, line_30deg2, line_m60deg };
 		for ( final Line roi : rois )
 		{
@@ -2122,7 +2120,7 @@ public class Directionality_ implements PlugIn
 		fit_results = da.getFitParameters();
 		center = fit_results.get( 0 )[ 2 ];
 		System.out.println( "With method: " + method );
-		System.out.println( String.format( "Found maxima at %.1f, expected it at 30°.\n", center, 30 ) );
+		System.out.println( String.format( "Found maxima at %.1f, expected it at 30°.\n", center/Math.PI*180., 30 ) );
 //		new ImagePlus("Orientation map for "+imp.getShortTitle(),da.getOrientationMap()).show();
 
 		/*
