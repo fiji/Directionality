@@ -55,6 +55,9 @@ import ij.process.ImageProcessor;
  * <p>
  * Angles are reported in their common mathematical sense. That is: 0º is the
  * East direction, and the orientation is counterclockwise.
+ * <p>
+ * It is possible to limit the analysis to a range of angles lower than
+ * the default 180 degrees.
  * 
  * <h2>Statistics generated</h2>
  * 
@@ -137,7 +140,7 @@ import ij.process.ImageProcessor;
  * ImagePlus imp = IJ.openImage( "./TwoLines.tif" );
  * imp.show();
  * Directionality_ da = new Directionality_();
- * da.run( "nbins=60, start=-90, method=gradient" );
+ * da.run( "nbins=60, start=-90, end=90, method=gradient" );
  * </pre>
  * 
  * It is also possible to run the plugin non-interactively from another class,
@@ -155,6 +158,8 @@ import ij.process.ImageProcessor;
  * 	dir.setMethod(fiji.analyze.directionality.Directionality_.AnalysisMethod.FOURIER_COMPONENTS)
  * 	dir.setBinNumber(30)
  * 	dir.setBinStart(-60)
+ *  # Alternatively set a range
+ *  # dir.setBinRange(-60,60)
  *	dir.setBuildOrientationMapFlag(True)
  *
  *	# Do calculation
@@ -1178,8 +1183,8 @@ public class Directionality_ implements PlugIn
 		gd.addMessage( current );
 		gd.addChoice( "Method:", method_names, setting_method.toString() );
 		gd.addNumericField( "Nbins: ", setting_nbins, 0 );
-		gd.addNumericField( "Histogram start", setting_bin_start, 0, 4, "°" );
-		gd.addNumericField( "Histogram end", setting_bin_end, 0, 4, "°" );
+		gd.addNumericField( "Histogram_start", setting_bin_start, 0, 4, "°" );
+		gd.addNumericField( "Histogram_end", setting_bin_end, 0, 4, "°" );
 		gd.addCheckbox( "Build orientation map", setting_build_orientation_map );
 		gd.addCheckbox( "Display_color_wheel", setting_display_color_wheel );
 		gd.addCheckbox( "Display_table", setting_display_table );
