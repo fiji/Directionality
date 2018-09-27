@@ -266,7 +266,7 @@ public class Directionality_ implements PlugIn
 
 	private static final String PLUGIN_NAME = "Directionality analysis";
 
-	private static final String VERSION_STR = "2.2.1-SNAPSHOT";
+	private static final String VERSION_STR = "2.3.0";
 
 	/* USER SETTING FIELDS, memorized between runs */
 	private static boolean setting_debug = false;
