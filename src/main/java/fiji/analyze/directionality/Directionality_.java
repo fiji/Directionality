@@ -33,6 +33,7 @@ import ij.gui.ImageCanvas;
 import ij.gui.Line;
 import ij.gui.NewImage;
 import ij.gui.Roi;
+import ij.gui.TextRoi;
 import ij.measure.CurveFitter;
 import ij.measure.ResultsTable;
 import ij.plugin.Duplicator;
@@ -183,7 +184,7 @@ import ij.process.ImageProcessor;
  *	ImagePlus("Orientation map", stack).show()
  *
  *	# Generate a color wheel
- *	fiji.analyze.directionality.Directionality_.generateColorWheel().show()
+ *	fiji.analyze.directionality.Directionality_.generateColorWheel(dir.getBinStart(), dir.getBinEnd()).show()
  * </pre>
  * 
  * <h2>Version history</h2>
@@ -527,15 +528,15 @@ public class Directionality_ implements PlugIn
 			final ImagePlus imp_map = new ImagePlus( "Orientation map for " + imp.getShortTitle(), orientation_map );
 			imp_map.show();
 			final ImageCanvas canvas_map = imp_map.getCanvas();
-			addColorMouseListener( canvas_map, (float) bin_start, (float) bin_end );
+			addColorMouseListener( canvas_map, bin_start, bin_end );
 		}
 
 		if ( display_color_wheel )
 		{
-			final ImagePlus cw = generateColorWheel();
+			final ImagePlus cw = generateColorWheel( bin_start, bin_end );
 			cw.show();
 			final ImageCanvas canvas_cw = cw.getCanvas();
-			addColorMouseListener( canvas_cw, (float) bin_start, (float) bin_end );
+			addColorMouseListener( canvas_cw, bin_start, bin_end );
 		}
 	}
 
@@ -1791,14 +1792,15 @@ public class Directionality_ implements PlugIn
 	 * STATIC METHODS
 	 */
 
-	public static final ImagePlus generateColorWheel()
+	public static final ImagePlus generateColorWheel( double angle_start, double angle_end )
 	{
 		final int cw_height = 256;
 		final int cw_width = cw_height / 2;
-		final ColorProcessor color_ip = new ColorProcessor( cw_width, cw_height );
-		FloatProcessor R = makeRMatrix( cw_height, cw_height );
-		FloatProcessor T = makeThetaMatrix( cw_height, cw_height );
-		final Roi half_roi = new Roi( cw_height / 2, 0, cw_width, cw_height );
+		final int offset = 64;
+		final ColorProcessor color_ip = new ColorProcessor( cw_width + offset, cw_height );
+		FloatProcessor R = makeRMatrix( cw_height + 2 * offset, cw_height );
+		FloatProcessor T = makeThetaMatrix( cw_height + 2 * offset, cw_height );
+		final Roi half_roi = new Roi( cw_height / 2 + offset, 0, cw_width + offset, cw_height );
 		R.setRoi( half_roi );
 		R = ( FloatProcessor ) R.crop();
 		T.setRoi( half_roi );
@@ -1810,11 +1812,11 @@ public class Directionality_ implements PlugIn
 		final byte[] bgh = new byte[ r.length ];
 		for ( int i = 0; i < t.length; i++ )
 		{
-			if ( r[ i ] > cw_height )
+			if ( r[ i ] > cw_width )
 			{
-				hue[ i ] = ( byte ) 255;
-				sat[ i ] = ( byte ) 255;
-				bgh[ i ] = 0;
+				hue[ i ] = 0;
+				sat[ i ] = 0;
+				bgh[ i ] = ( byte ) 255;
 			}
 			else
 			{
@@ -1824,11 +1826,30 @@ public class Directionality_ implements PlugIn
 			}
 		}
 		color_ip.setHSB( hue, sat, bgh );
+		color_ip.setBackgroundValue( 255 );
+		color_ip.filterRGB(ColorProcessor.RGB_TRANSLATE, offset);
+		color_ip.setColor( Color.WHITE );
+		final Roi fill_roi = new Roi( 0, 0, offset, cw_height );
+		color_ip.setRoi( fill_roi );
+		color_ip.fill( fill_roi );
+		
+		color_ip.setColor( Color.BLACK );
+		color_ip.setJustification( ImageProcessor.RIGHT_JUSTIFY );
+		String txt_min = String.valueOf( angle_start );
+		String txt_mid = String.valueOf( 0.5 * ( angle_start + angle_end ) );
+		String txt_max = String.valueOf( angle_end );
+		final TextRoi text_roi_min = new TextRoi( offset - 5, cw_height - 25, txt_min );
+		text_roi_min.drawPixels( color_ip );
+		final TextRoi text_roi_max = new TextRoi( offset - 5, 0, txt_max );
+		text_roi_max.drawPixels( color_ip );
+		final TextRoi text_roi_mid = new TextRoi( offset - 5, cw_height / 2 - 13, txt_mid );
+		text_roi_mid.drawPixels( color_ip );
+
 		final ImagePlus imp = new ImagePlus( "Color wheel", color_ip );
 		return imp;
 	}
 
-	protected static final void addColorMouseListener( final ImageCanvas canvas, float angle_start, float angle_end )
+	protected static final void addColorMouseListener( final ImageCanvas canvas, double angle_start, double angle_end )
 	{
 
 		final MouseMotionListener ml = new MouseMotionListener()
@@ -1851,7 +1872,7 @@ public class Directionality_ implements PlugIn
 					final int g = ( c & 0xff00 ) >> 8;
 					final int b = c & 0xff;
 					final float[] hsb = Color.RGBtoHSB( r, g, b, null );
-					final float angle = hsb[ 0 ] * (angle_end - angle_start) + angle_start;
+					final float angle = (float) (hsb[ 0 ] * (angle_end - angle_start) + angle_start);
 					final float amount = hsb[ 1 ];
 					IJ.showStatus( String.format( "Orientation: %5.1f ° - Amont: %5.1f %%", angle, 100 * amount ) );
 				}
@@ -2099,6 +2120,7 @@ public class Directionality_ implements PlugIn
 		final Line[] rois = new Line[] { line_30deg, line_30deg2, line_m60deg };
 		for ( final Line roi : rois )
 		{
+			roi.setStrokeWidth(2);
 			ip.draw( roi );
 		}
 		final GaussianBlur smoother = new GaussianBlur();
@@ -2114,6 +2136,7 @@ public class Directionality_ implements PlugIn
 
 		da.setBinNumber( 60 );
 		da.setBinStart( -90 );
+//		da.setBinRange( -80, 60 );
 
 		da.setBuildOrientationMapFlag( false );
 		da.setDebugFlag( false );
@@ -2139,9 +2162,9 @@ public class Directionality_ implements PlugIn
 		 * getOrientationMap()).show();
 		 */
 
-//		ImagePlus cw = generateColorWheel();
+//		ImagePlus cw = generateColorWheel( da.getBinStart(), da.getBinEnd() );
 //		cw.show();
-//		addColorMouseListener(cw.getCanvas(), (float) da.getBinStart(), (float) da.getBinEnd() );
+//		addColorMouseListener(cw.getCanvas(), da.getBinStart(), da.getBinEnd() );
 
 		da.plotResults().setVisible( true );
 		da.displayResultsTable().show( "Table" );
