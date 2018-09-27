@@ -54,6 +54,11 @@
 	</developers>
 	<contributors>
 		<contributor>
+			<name>Giovanni Cardone</name>
+			<url>https://github.com/giocard</url>
+			<properties><id>giocard</id></properties>
+		</contributor>
+		<contributor>
 			<name>Johannes Schindelin</name>
 			<url>http://imagej.net/User:Schindelin</url>
 			<properties><id>dscho</id></properties>
