@@ -948,8 +948,11 @@ public class Directionality_ implements PlugIn
 	 */
 
 	/**
-	 * Set the image for analysis. Calling this method resets the field
+	 * Sets the image for analysis. Calling this method resets the field
 	 * <code>histograms</code> to null.
+	 * 
+	 * @param imp
+	 *            the image.
 	 */
 	public void setImagePlus( final ImagePlus imp )
 	{
@@ -958,7 +961,9 @@ public class Directionality_ implements PlugIn
 	}
 
 	/**
-	 * Get the image analyzed.
+	 * Gets the image analyzed.
+	 * 
+	 * @return the image.
 	 */
 	public ImagePlus getImagePlus()
 	{
@@ -966,7 +971,7 @@ public class Directionality_ implements PlugIn
 	}
 
 	/**
-	 * Return the parameters of the gaussian fit of the main peak in histogram.
+	 * Returns the parameters of the gaussian fit of the main peak in histogram.
 	 * Results are arranged in an ArrayList of double[], one array per slice
 	 * analyzed. If the fit was not done prior to this method call, it is
 	 * called. If the method {@link #computeHistograms()} was not called, null
@@ -981,12 +986,10 @@ public class Directionality_ implements PlugIn
 	 * <li>d
 	 * </ol>
 	 *
-	 * <p>
-	 * See {@link #getGoodnessOfFit()}, {@link #getHistograms()},
-	 * {@link #getBins()}
-	 * </p>
-	 * 
-	 * @return the fitting parameters
+	 * @see #getGoodnessOfFit()
+	 * @see #getHistograms()
+	 * @see #getBins()
+	 * @return the fitting parameters.
 	 */
 	public ArrayList< double[] > getFitParameters()
 	{
@@ -998,16 +1001,15 @@ public class Directionality_ implements PlugIn
 	}
 
 	/**
-	 * Return the goodness of fit for the gaussian fit; 1 is good, 0 is bad. One
-	 * value per slice. If the fit was not done prior to this method call, it is
-	 * called. If the method {@link #computeHistograms()} was not called, null
-	 * is returned.
-	 * <p>
-	 * See {@link #getFitParameters()}, {@link #getHistograms()},
-	 * {@link #getBins()}
-	 * </p>
+	 * Returns the goodness of fit for the gaussian fit; 1 is good, 0 is bad.
+	 * One value per slice. If the fit was not done prior to this method call,
+	 * it is called. If the method {@link #computeHistograms()} was not called,
+	 * null is returned.
 	 * 
-	 * @return the goodness of fit
+	 * @see #getFitParameters()
+	 * @see #getHistograms()
+	 * @see #getBins()
+	 * @return the goodness of fit.
 	 */
 	public double[] getGoodnessOfFit()
 	{
@@ -1019,13 +1021,12 @@ public class Directionality_ implements PlugIn
 	}
 
 	/**
-	 * Return the directionality histograms as an ArrayList of double[], one
+	 * Returns the directionality histograms as an ArrayList of double[], one
 	 * array per slice.
-	 * <p>
-	 * See {@link #getBins()}, {@link #getFitParameters()},
-	 * {@link #getGoodnessOfFit()}
-	 * </p>
 	 * 
+	 * @see #getBins()
+	 * @see #getFitParameters()
+	 * @see #getGoodnessOfFit()
 	 * @return the directionality histograms; is null if the method
 	 *         {@link #computeHistograms()} was not called before.
 	 */
@@ -1035,14 +1036,13 @@ public class Directionality_ implements PlugIn
 	}
 
 	/**
-	 * Return the center of the bins for the directionality histograms. They are
-	 * in degrees.
-	 * <p>
-	 * See {@link #getHistograms()}, {@link #getFitParameters()},
-	 * {@link #getGoodnessOfFit()}
-	 * </p>
+	 * Returns the center of the bins for the directionality histograms. They
+	 * are in degrees.
 	 * 
-	 * @return the bin centers, in degrees
+	 * @see #getHistograms()
+	 * @see #getFitParameters()
+	 * @see #getGoodnessOfFit()
+	 * @return the bin centers, in degrees.
 	 */
 	public double[] getBins()
 	{
@@ -1054,8 +1054,11 @@ public class Directionality_ implements PlugIn
 	}
 
 	/**
-	 * Set the desired number of bins. This resets the <code>histograms</code>
+	 * Sets the desired number of bins. This resets the <code>histograms</code>
 	 * field to null.
+	 * 
+	 * @param nbins
+	 *            the number of bins.
 	 */
 	public void setBinNumber( final int nbins )
 	{
@@ -1064,7 +1067,9 @@ public class Directionality_ implements PlugIn
 	}
 
 	/**
-	 * Return the current number of bins for this instance.
+	 * Returns the current number of bins for this instance.
+	 * 
+	 * @return the number of bins.
 	 */
 	public int getBinNumber()
 	{
@@ -1072,8 +1077,11 @@ public class Directionality_ implements PlugIn
 	}
 
 	/**
-	 * Set the desired start for the angle bins, in degrees. This resets the
+	 * Sets the desired start for the angle bins, in degrees. This resets the
 	 * <code>histograms</code> field to null.
+	 * 
+	 * @param bin_start
+	 *            the bin start.
 	 */
 	public void setBinStart( final double bin_start )
 	{
@@ -1083,7 +1091,9 @@ public class Directionality_ implements PlugIn
 	}
 
 	/**
-	 * Return the current value for angle bin start, in degrees.
+	 * Returns the current value for angle bin start, in degrees.
+	 * 
+	 * @return the bin start.
 	 */
 	public double getBinStart()
 	{
@@ -1091,8 +1101,13 @@ public class Directionality_ implements PlugIn
 	}
 
 	/**
-	 * Set the desired end for the angle bins, in degrees. This resets the
+	 * Sets the desired end for the angle bins, in degrees. This resets the
 	 * <code>histograms</code> field to null.
+	 * 
+	 * @param bin_start
+	 *            the bin start.
+	 * @param bin_end
+	 *            the bin end.
 	 */
 	public void setBinRange( final double bin_start, final double bin_end )
 	{
@@ -1102,7 +1117,9 @@ public class Directionality_ implements PlugIn
 	}
 
 	/**
-	 * Return the current value for angle bin end, in degrees.
+	 * Returns the current value for angle bin end, in degrees.
+	 * 
+	 * @return the bin end.
 	 */
 	public double getBinEnd()
 	{
@@ -1110,11 +1127,13 @@ public class Directionality_ implements PlugIn
 	}
 
 	/**
-	 * Set the desired method for analysis. This resets the
+	 * Sets the desired method for analysis. This resets the
 	 * <code>histograms</code> field to null.
-	 * <p>
-	 * See {@link AnalysisMethod}
-	 * </p>
+	 * 
+	 * @param method
+	 *            the analysis method.
+	 * 
+	 * @see AnalysisMethod
 	 */
 	public void setMethod( final AnalysisMethod method )
 	{
@@ -1123,7 +1142,9 @@ public class Directionality_ implements PlugIn
 	}
 
 	/**
-	 * Return the analysis method used by this instance.
+	 * Returns the analysis method used by this instance.
+	 * 
+	 * @return the analysis method.
 	 */
 	public AnalysisMethod getMethod()
 	{
@@ -1131,7 +1152,10 @@ public class Directionality_ implements PlugIn
 	}
 
 	/**
-	 * Set the debug flag.
+	 * Sets the debug flag.
+	 * 
+	 * @param flag
+	 *            the debug flag.
 	 */
 	public void setDebugFlag( final boolean flag )
 	{
@@ -1139,7 +1163,10 @@ public class Directionality_ implements PlugIn
 	}
 
 	/**
-	 * Set the build orientation map flag
+	 * Sets the build orientation map flag
+	 * 
+	 * @param flag
+	 *            whether the orientation map shall be built.
 	 */
 	public void setBuildOrientationMapFlag( final boolean flag )
 	{
@@ -1147,9 +1174,12 @@ public class Directionality_ implements PlugIn
 	}
 
 	/**
-	 * Return the orientation map as an {@link ImageStack}, one slice per slice
+	 * Returns the orientation map as an {@link ImageStack}, one slice per slice
 	 * in the source image. Return null if the orientation map flag was not set,
 	 * or if computation was not done.
+	 * 
+	 * @return the orientation map.
+	 * 
 	 */
 	public ImageStack getOrientationMap()
 	{
@@ -1792,7 +1822,7 @@ public class Directionality_ implements PlugIn
 	 * STATIC METHODS
 	 */
 
-	public static final ImagePlus generateColorWheel( double angle_start, double angle_end )
+	public static final ImagePlus generateColorWheel( final double angle_start, final double angle_end )
 	{
 		final int cw_height = 256;
 		final int cw_width = cw_height / 2;
@@ -1835,9 +1865,9 @@ public class Directionality_ implements PlugIn
 		
 		color_ip.setColor( Color.BLACK );
 		color_ip.setJustification( ImageProcessor.RIGHT_JUSTIFY );
-		String txt_min = String.valueOf( angle_start );
-		String txt_mid = String.valueOf( 0.5 * ( angle_start + angle_end ) );
-		String txt_max = String.valueOf( angle_end );
+		final String txt_min = String.valueOf( angle_start );
+		final String txt_mid = String.valueOf( 0.5 * ( angle_start + angle_end ) );
+		final String txt_max = String.valueOf( angle_end );
 		final TextRoi text_roi_min = new TextRoi( offset - 5, cw_height - 25, txt_min );
 		text_roi_min.drawPixels( color_ip );
 		final TextRoi text_roi_max = new TextRoi( offset - 5, 0, txt_max );
@@ -1849,7 +1879,7 @@ public class Directionality_ implements PlugIn
 		return imp;
 	}
 
-	protected static final void addColorMouseListener( final ImageCanvas canvas, double angle_start, double angle_end )
+	protected static final void addColorMouseListener( final ImageCanvas canvas, final double angle_start, final double angle_end )
 	{
 
 		final MouseMotionListener ml = new MouseMotionListener()
@@ -1941,6 +1971,7 @@ public class Directionality_ implements PlugIn
 	 * 
 	 * @param ip
 	 *            the source FloatProcessor
+	 * @return a new {@link FloatProcessor}
 	 */
 	protected static final FloatProcessor displayLog( final FloatProcessor ip )
 	{
@@ -1979,6 +2010,7 @@ public class Directionality_ implements PlugIn
 	 * @param nx
 	 *            the width in pixel of the desired window
 	 * @param ny
+	 *            the hirght in pixel of the desired window
 	 * @return the window, as a FloatProcessor
 	 * @see #getBlackmanPeriodicWindow1D(int)
 	 */
