@@ -1,4 +1,4 @@
-[![](https://travis-ci.org/fiji/Directionality.svg?branch=master)](https://travis-ci.org/fiji/Directionality)
+[![](https://github.com/fiji/Directionality/actions/workflows/build-main.yml/badge.svg)](https://github.com/fiji/Directionality/actions/workflows/build-main.yml)
 
 Directionality
 ==============
